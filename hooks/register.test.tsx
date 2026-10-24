@@ -20,7 +20,7 @@ const BAND = {
   }
 } as const;
 
-function stubEngine(hook: On, contextPercent: number): MockClock {
+function stubEngine(hook: On, readPercent: () => number): MockClock {
   hook('command.register', () => ({ value: { command: 'agent-digitama' } }));
   hook('session.start', (_engine, event) => ({ cwd: event.cwd }));
   hook('prompt.submit', (_engine, event) => ({ text: event.text }));
@@ -29,7 +29,7 @@ function stubEngine(hook: On, contextPercent: number): MockClock {
     return <Text>prompt hint</Text>;
   });
   hook('session.usage', () => ({
-    value: { startedAt: 0, context: { window: 200_000, percent: contextPercent }, rateLimits: [] }
+    value: { startedAt: 0, context: { window: 200_000, percent: readPercent() }, rateLimits: [] }
   }));
   return mock.clock(hook);
 }
@@ -50,13 +50,20 @@ async function runCommand(engine: Engine, args: string): Promise<string | undefi
 
 function encodeFrames(form: string, frames: readonly number[]): string[] {
   const sheet = SHEETS[form];
-  return sheet === undefined ? [] : frames.map((frame) => encodeFrame(sheet, frame, false));
+  return sheet === undefined
+    ? []
+    : frames.flatMap((frame) => [
+        encodeFrame(sheet, frame, false),
+        encodeFrame(sheet, frame, true)
+      ]);
 }
+
+const AFTER_SCENES_MS = 6000;
 
 async function hatchAgumon(engine: Engine, clock: MockClock): Promise<void> {
   await startSession(engine);
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
-  await clock.advance(2000);
+  await clock.advance(AFTER_SCENES_MS);
 }
 
 async function readBandCells(engine: Engine): Promise<unknown> {
@@ -67,7 +74,7 @@ async function readBandCells(engine: Engine): Promise<unknown> {
 }
 
 test('agent-digitama_NoSavedPartner_ShowsAgumon', async (engine, hook) => {
-  stubEngine(hook, 0);
+  stubEngine(hook, () => 0);
   mock.store(hook);
   await startSession(engine);
 
@@ -75,7 +82,7 @@ test('agent-digitama_NoSavedPartner_ShowsAgumon', async (engine, hook) => {
 });
 
 test('agent-digitama_SaveVeemon_IsTheSavedPartner', async (engine, hook) => {
-  stubEngine(hook, 0);
+  stubEngine(hook, () => 0);
   mock.store(hook);
   await startSession(engine);
   await runCommand(engine, 'veemon');
@@ -84,7 +91,7 @@ test('agent-digitama_SaveVeemon_IsTheSavedPartner', async (engine, hook) => {
 });
 
 test('agent-digitama_UnknownPartner_KeepsSavedPartner', async (engine, hook) => {
-  stubEngine(hook, 0);
+  stubEngine(hook, () => 0);
   mock.store(hook, { partner: 'Gabumon' });
   await startSession(engine);
   await runCommand(engine, 'Pikachu');
@@ -93,7 +100,7 @@ test('agent-digitama_UnknownPartner_KeepsSavedPartner', async (engine, hook) => 
 });
 
 test('agent-digitama_UnknownPartner_ListsChoices', async (engine, hook) => {
-  stubEngine(hook, 0);
+  stubEngine(hook, () => 0);
   mock.store(hook);
   await startSession(engine);
 
@@ -101,17 +108,17 @@ test('agent-digitama_UnknownPartner_ListsChoices', async (engine, hook) => {
 });
 
 test('band_CorruptSavedPartner_HatchesAgumon', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   mock.store(hook, { partner: 42 });
   await startSession(engine);
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
-  await clock.advance(2000);
+  await clock.advance(AFTER_SCENES_MS);
 
   expect(encodeFrames('Agumon', FRAMES.walk)).toContain(await readBandCells(engine));
 });
 
 test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
-  stubEngine(hook, 0);
+  stubEngine(hook, () => 0);
   mock.store(hook, { partner: 'Veemon' });
   await startSession(engine);
 
@@ -119,16 +126,17 @@ test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
 });
 
 test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
-  stubEngine(hook, 0);
+  const clock = stubEngine(hook, () => 0);
   mock.store(hook, { partner: 'Veemon' });
   await startSession(engine);
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
+  await clock.advance(AFTER_SCENES_MS);
 
   expect(encodeFrames('Chicomon', FRAMES.walk)).toContain(await readBandCells(engine));
 });
 
 test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   hook('store.get', () => {
     throw new Error('unreadable store');
   });
@@ -138,7 +146,7 @@ test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
 });
 
 test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   mock.store(hook);
   hook('session.end', (_engine, event) => ({ sessionId: event.sessionId }));
   await hatchAgumon(engine, clock);
@@ -152,7 +160,7 @@ test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
 });
 
 test('band_FailedToolCall_ShowsHurtFrame', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   mock.store(hook);
   hook('tool.call', () => ({ isError: true, result: 'Exit code 3', text: 'Exit code 3' }));
   await hatchAgumon(engine, clock);
@@ -162,7 +170,7 @@ test('band_FailedToolCall_ShowsHurtFrame', async (engine, hook) => {
 });
 
 test('band_TurnComplete_ShowsHappyFrame', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   mock.store(hook);
   hook('turn.complete', (_engine, event) => ({ text: event.answer }));
   await hatchAgumon(engine, clock);
@@ -178,7 +186,7 @@ test('band_TurnComplete_ShowsHappyFrame', async (engine, hook) => {
 });
 
 test('band_PermissionPrompt_CallsForYou', async (engine, hook) => {
-  const clock = stubEngine(hook, 12);
+  const clock = stubEngine(hook, () => 12);
   mock.store(hook);
   hook('classic.Notification', () => ({}));
   await hatchAgumon(engine, clock);
@@ -188,4 +196,25 @@ test('band_PermissionPrompt_CallsForYou', async (engine, hook) => {
   });
 
   expect(encodeFrames('Agumon', FRAMES.angry)).toContain(await readBandCells(engine));
+});
+
+test('band_Hatching_ShowsCrackedEgg', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
+  await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
+  await clock.advance(1100);
+
+  expect(encodeFrames('Agu_Digitama', FRAMES.crack)).toContain(await readBandCells(engine));
+});
+
+test('band_CompactionFromChampion_SettlesOnAgumon', async (engine, hook) => {
+  let contextPercent = 40;
+  const clock = stubEngine(hook, () => contextPercent);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
+  contextPercent = 12;
+  await clock.advance(AFTER_SCENES_MS);
+
+  expect(encodeFrames('Agumon', FRAMES.walk)).toContain(await readBandCells(engine));
 });

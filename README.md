@@ -28,7 +28,7 @@ The form follows the session's context usage:
 | 55% | Ultimate | MetalGreymon |
 | 80% | Mega | WarGreymon |
 
-The egg hatches on your first prompt. When compaction frees context, the partner de-digivolves to the stage that matches, but never below Rookie once it got there.
+The egg hatches on your first prompt: it wobbles, cracks and bursts into the baby. Every stage change plays a short digivolution: the old form flashes, morphs through white silhouettes and sparkles, and the new form appears. When compaction frees context, the partner de-digivolves to the stage that matches, but never below Rookie once it got there. Going down plays the same morph without sparkles.
 
 ## Reactions
 

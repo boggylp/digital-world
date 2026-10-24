@@ -6,7 +6,8 @@ export const FRAMES = {
   happy: [7],
   angry: [8],
   hurt: [9, 10],
-  egg: [0, 1]
+  egg: [0, 1],
+  crack: [2]
 } as const;
 
 export const REQUIRED_FRAMES = [...FRAMES.walk, ...FRAMES.happy, ...FRAMES.angry, ...FRAMES.hurt];
@@ -40,9 +41,12 @@ function packCell(top: Pixel, bottom: Pixel): [number, number, number] {
   return [UPPER_HALF_BLOCK, top, bottom ?? DEFAULT_COLOR];
 }
 
+export function encodePixels(pixels: Pixel[][]): string {
+  return btoa(String.fromCodePoint(...new Uint8Array(packHalfBlocks(pixels).buffer)));
+}
+
 export function encodeFrame(sheet: Sheet, frame: number, isMirrored: boolean): string {
-  const cells = packHalfBlocks(readPixels(sheet, frame, isMirrored));
-  return btoa(String.fromCodePoint(...new Uint8Array(cells.buffer)));
+  return encodePixels(readPixels(sheet, frame, isMirrored));
 }
 
 export function packHalfBlocks(pixels: Pixel[][]): Uint32Array {

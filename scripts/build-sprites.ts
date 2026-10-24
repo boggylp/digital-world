@@ -56,7 +56,11 @@ const sheets: Record<string, Sheet> = {};
 for (const line of LINES) {
   for (const [stage, name] of Object.entries(line.forms)) {
     const sheet = readSheet(join(spriteDirectory, `${name}.png`));
-    assertFramesDrawn(name, sheet, stage === 'Digitama' ? FRAMES.egg : REQUIRED_FRAMES);
+    assertFramesDrawn(
+      name,
+      sheet,
+      stage === 'Digitama' ? [...FRAMES.egg, ...FRAMES.crack] : REQUIRED_FRAMES
+    );
     sheets[name] = sheet;
   }
 }
