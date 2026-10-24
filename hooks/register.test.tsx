@@ -2,7 +2,6 @@ import type { On } from 'claude-code';
 import { expect, mock, test } from 'claude-code/testing';
 import type { Engine, MockClock } from 'claude-code/testing';
 
-import { DEFAULT_LINE } from '../src/roster.ts';
 import { encodeFrame, FRAMES } from '../src/sprite.ts';
 import { SHEETS } from '../src/sprites.generated.ts';
 
@@ -49,8 +48,8 @@ async function runCommand(engine: Engine, args: string): Promise<string | undefi
   return result.text;
 }
 
-function encodeAgumonFrames(frames: readonly number[]): string[] {
-  const sheet = SHEETS[DEFAULT_LINE.forms.Rookie];
+function encodeFrames(form: string, frames: readonly number[]): string[] {
+  const sheet = SHEETS[form];
   return sheet === undefined ? [] : frames.map((frame) => encodeFrame(sheet, frame, false));
 }
 
@@ -65,13 +64,6 @@ async function readBandCells(engine: Engine): Promise<unknown> {
   const raster = await band.find({ type: 'Raster', key: 'partner' });
   await band.unmount();
   return raster?.props.cells;
-}
-
-async function findBandText(engine: Engine, text: RegExp): Promise<string | undefined> {
-  const band = await engine.ui.mount(BAND);
-  const found = await band.find({ type: 'Text', text });
-  await band.unmount();
-  return found?.text;
 }
 
 test('agent-digitama_NoSavedPartner_ShowsAgumon', async (engine, hook) => {
@@ -115,7 +107,7 @@ test('band_CorruptSavedPartner_HatchesAgumon', async (engine, hook) => {
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   await clock.advance(2000);
 
-  expect(await findBandText(engine, /mon/u)).toBe('Agumon ');
+  expect(encodeFrames('Agumon', FRAMES.walk)).toContain(await readBandCells(engine));
 });
 
 test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
@@ -123,7 +115,7 @@ test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
   mock.store(hook, { partner: 'Veemon' });
   await startSession(engine);
 
-  expect(await findBandText(engine, /Digitama/u)).toBe('Digitama ');
+  expect(encodeFrames('V_Digitama', FRAMES.egg)).toContain(await readBandCells(engine));
 });
 
 test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
@@ -132,7 +124,7 @@ test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
   await startSession(engine);
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
 
-  expect(await findBandText(engine, /mon/u)).toBe('Chicomon ');
+  expect(encodeFrames('Chicomon', FRAMES.walk)).toContain(await readBandCells(engine));
 });
 
 test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
@@ -142,7 +134,7 @@ test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
   });
   await hatchAgumon(engine, clock);
 
-  expect(await findBandText(engine, /mon/u)).toBe('Agumon ');
+  expect(encodeFrames('Agumon', FRAMES.walk)).toContain(await readBandCells(engine));
 });
 
 test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
@@ -156,7 +148,7 @@ test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
     resume: { id: 'session-1' }
   });
 
-  expect(await findBandText(engine, /Digitama/u)).toBe('Digitama ');
+  expect(encodeFrames('Agu_Digitama', FRAMES.egg)).toContain(await readBandCells(engine));
 });
 
 test('band_FailedToolCall_ShowsHurtFrame', async (engine, hook) => {
@@ -166,7 +158,7 @@ test('band_FailedToolCall_ShowsHurtFrame', async (engine, hook) => {
   await hatchAgumon(engine, clock);
   await engine.tool.call({ tool: 'Bash', command: 'exit 3' });
 
-  expect(encodeAgumonFrames(FRAMES.hurt)).toContain(await readBandCells(engine));
+  expect(encodeFrames('Agumon', FRAMES.hurt)).toContain(await readBandCells(engine));
 });
 
 test('band_TurnComplete_ShowsHappyFrame', async (engine, hook) => {
@@ -182,7 +174,7 @@ test('band_TurnComplete_ShowsHappyFrame', async (engine, hook) => {
     reason: 'answer'
   });
 
-  expect(encodeAgumonFrames(FRAMES.happy)).toContain(await readBandCells(engine));
+  expect(encodeFrames('Agumon', FRAMES.happy)).toContain(await readBandCells(engine));
 });
 
 test('band_PermissionPrompt_CallsForYou', async (engine, hook) => {
@@ -195,5 +187,5 @@ test('band_PermissionPrompt_CallsForYou', async (engine, hook) => {
     notification_type: 'permission_prompt'
   });
 
-  expect(await findBandText(engine, /mon/u)).toBe('Agumon ! ');
+  expect(encodeFrames('Agumon', FRAMES.angry)).toContain(await readBandCells(engine));
 });

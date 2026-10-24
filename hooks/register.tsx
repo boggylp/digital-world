@@ -35,7 +35,6 @@ let tick = 0;
 let percent = 0;
 let bandId: string | null = null;
 let sentCells: string | null = null;
-let label = '';
 let ticker: { cancel: () => void } | null = null;
 
 async function readSavedLine(engine: EngineInterface): Promise<Line> {
@@ -57,19 +56,10 @@ function encodeCells(): string {
   return encodeFrame(sheet, selectFrame(partner, tick), isMirrored);
 }
 
-function describePartner(): string {
-  return partner.isCalling ? `${nameForm(partner)} !` : nameForm(partner);
-}
-
-function changePartner(engine: EngineInterface, changed: Partner): void {
-  partner = changed;
-  if (describePartner() !== label) engine.ui.invalidate('ui.render');
-}
-
 async function measureContext(engine: EngineInterface): Promise<void> {
   const { context } = await engine.session.usage();
   percent = context.percent ?? percent;
-  changePartner(engine, measurePartner(partner, percent));
+  partner = measurePartner(partner, percent);
 }
 
 async function blitFrame(engine: EngineInterface): Promise<void> {
@@ -121,7 +111,7 @@ function registerLifecycleHooks(hook: On): void {
   });
 
   hook('prompt.submit', (engine, event, next) => {
-    changePartner(engine, hatchPartner(partner, percent));
+    partner = hatchPartner(partner, percent);
     return next(event);
   });
 }
@@ -129,22 +119,19 @@ function registerLifecycleHooks(hook: On): void {
 function registerReactionHooks(hook: On): void {
   hook('tool.call', async (engine, event, next) => {
     if (event.agentId) return next(event);
-    if (QUESTION_TOOLS.has(String(event.tool))) changePartner(engine, callPartner(partner, true));
+    if (QUESTION_TOOLS.has(String(event.tool))) partner = callPartner(partner, true);
     const result = await next(event);
     const isFailure =
       result.isError === true && !next.signal.aborted && !REFUSED.test(String(result.text ?? ''));
     const answered = callPartner(partner, false);
-    changePartner(engine, isFailure ? reactPartner(answered, 'hurt', tick) : answered);
+    partner = isFailure ? reactPartner(answered, 'hurt', tick) : answered;
     return result;
   });
 
   hook('turn.complete', async (engine, event, next) => {
     if (!event.agentId) {
       const answered = callPartner(partner, false);
-      changePartner(
-        engine,
-        event.reason === 'answer' ? reactPartner(answered, 'happy', tick) : answered
-      );
+      partner = event.reason === 'answer' ? reactPartner(answered, 'happy', tick) : answered;
       await measureContext(engine);
     }
     return next(event);
@@ -152,13 +139,13 @@ function registerReactionHooks(hook: On): void {
 
   hook('classic.PermissionRequest', async (engine, event, next) => {
     const result = await next(event);
-    if (!result?.decision) changePartner(engine, callPartner(partner, true));
+    if (!result?.decision) partner = callPartner(partner, true);
     return result;
   });
 
   hook('classic.Notification', (engine, event, next) => {
     if (ALERT_NOTIFICATIONS.has(event.notification_type)) {
-      changePartner(engine, callPartner(partner, true));
+      partner = callPartner(partner, true);
     }
     return next(event);
   });
@@ -166,24 +153,17 @@ function registerReactionHooks(hook: On): void {
 
 function registerBandHook(hook: On): void {
   hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, next) => {
-    label = describePartner();
-    const isRoomy =
-      event.props.maxRows >= SPRITE_ROWS && event.props.bodyColumns > FRAME_SIZE + label.length;
+    const isRoomy = event.props.maxRows >= SPRITE_ROWS && event.props.bodyColumns > FRAME_SIZE;
     if (event.surface !== 'terminal' || event.props.hasSurvey || !isRoomy) {
       bandId = null;
       return next(event);
     }
     bandId = event.requestId;
     sentCells = encodeCells();
-    const { Box, Raster, Text } = engine.ui.resolve(event);
+    const { Box, Raster } = engine.ui.resolve(event);
     const theirs = await next(event);
     const corner = (
-      <Box flexDirection="row" alignItems="flex-end">
-        <Text color={partner.isCalling ? 'red' : undefined} dimColor={!partner.isCalling}>
-          {label}{' '}
-        </Text>
-        <Raster key={RASTER_KEY} columns={FRAME_SIZE} rows={SPRITE_ROWS} cells={sentCells} />
-      </Box>
+      <Raster key={RASTER_KEY} columns={FRAME_SIZE} rows={SPRITE_ROWS} cells={sentCells} />
     );
     if (!theirs) return corner;
     return (

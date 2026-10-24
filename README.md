@@ -12,7 +12,7 @@ At the prompt of a Claude Code terminal session:
 
 Answer `y` to add the marketplace, then pick a scope. The partner appears in the band above the prompt.
 
-Requirements: a Claude Code build with mods (tested on 2.1.310) and a truecolor terminal. The band draws in the terminal only, not in the desktop app, VS Code or mobile. It hides itself when the band is narrower than the partner and its name, or shorter than 8 rows.
+Requirements: a Claude Code build with mods (tested on 2.1.310) and a truecolor terminal. The band draws in the terminal only, not in the desktop app, VS Code or mobile. It hides itself when the band is narrower than 16 columns or shorter than 8 rows.
 
 ## How the partner grows
 
@@ -34,7 +34,7 @@ The egg hatches on your first prompt. When compaction frees context, the partner
 
 - **Turn complete:** the partner cheers.
 - **Tool call fails:** the partner flinches.
-- **Claude needs you:** the partner turns angry and its name shows `!`. Claude Code hides the band while a dialog is open, so a question or permission dialog covers the signal.
+- **Claude needs you:** the partner turns angry. Claude Code hides the band while a dialog is open, so a question or permission dialog covers the signal.
 
 ## Choose a partner
 
