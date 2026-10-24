@@ -1,0 +1,8 @@
+{
+  "name": "agent-digitama",
+  "version": "0.1.0",
+  "description": "A Digimon partner above the prompt that hatches and digivolves as the context window fills",
+  "author": { "name": "Bogambe" },
+  "license": "MIT",
+  "repository": "https://github.com/boggylp/agent-digitama"
+}

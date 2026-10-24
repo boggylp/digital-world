@@ -1,0 +1,5 @@
+{
+  "name": "agent-digitama",
+  "owner": { "name": "boggylp" },
+  "plugins": [{ "name": "agent-digitama", "source": "./" }]
+}
