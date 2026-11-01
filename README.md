@@ -12,7 +12,16 @@ At the prompt of a Claude Code terminal session:
 
 Answer `y` to add the marketplace, then pick a scope. The partner appears in the band above the prompt.
 
-Requirements: a Claude Code build with mods (tested on 2.1.310) and a truecolor terminal. The band draws in the terminal only, not in the desktop app, VS Code or mobile. It hides itself when the band is narrower than 16 columns or shorter than 8 rows.
+Requirements: Claude Code with mods (tested on 2.1.316) and a truecolor terminal. The partner appears only in terminal sessions.
+
+Ghostty, kitty and compatible iTerm2 sessions use image rendering. Other terminals use text cells. If Claude refuses image updates, the partner falls back to text cells for that session.
+
+| Renderer | Minimum band width | Minimum band height |
+| --- | --- | --- |
+| Image | 8 columns | 4 rows |
+| Text cells | 24 columns | 8 rows |
+
+The partner hides when the band cannot fit its renderer. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
 
 ## How the partner grows
 
@@ -32,9 +41,11 @@ The egg hatches on your first prompt: it wobbles, cracks and bursts into the bab
 
 ## Reactions
 
-- **Turn complete:** the partner cheers.
-- **Tool call fails:** the partner flinches.
-- **Claude needs you:** the partner turns angry. Claude Code hides the band while a dialog is open, so a question or permission dialog covers the signal.
+- **Turn complete:** a Digimon UP partner hops, and a dot-sprite partner cheers.
+- **Tool call fails:** a Digimon UP partner flashes red, and a dot-sprite partner flinches.
+- **Claude needs you:** a Digimon UP partner pulses amber, and a dot-sprite partner turns angry.
+
+Claude Code hides the band while a dialog is open, so a question or permission dialog covers the signal.
 
 ## Choose a partner
 
@@ -46,15 +57,18 @@ New sessions hatch the saved partner's egg. The current session keeps its partne
 
 ## Sprites
 
-The 16×16 sprites are Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/), bundled so the partner works offline. Each sprite is two pixels per terminal cell, drawn with half-block characters, which makes the partner 16 columns by 8 rows. A smaller partner stops reading as its Digimon, so the partner keeps the sprite's full resolution. See [CREDITS.md](CREDITS.md).
+[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for the Agumon, Gabumon and Palmon lines, plus Biyomon from Rookie onward. The image renderer preserves the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
+
+| Renderer | Pixel canvas |
+| --- | --- |
+| Image | 80×80 |
+| Text cells | 24×16 |
+
+Eggs, Biyomon's early forms, Salamon and Veemon use Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/) with their original artwork, scaled evenly for image rendering. Both sets are bundled for offline use. See [CREDITS.md](CREDITS.md).
 
 A line joins the roster only when the set has every stage from egg to Mega. Tentomon, Gomamon and Patamon lack a Baby I sprite.
 
-## Sprite experiments
-
-The full [Digimon UP sprite collection](https://github.com/dannyphang/digimon-up-sprites) is available in [assets/digimon-up/](assets/digimon-up/) for trying more characters and animations. The original images retain their full resolution. [UPSTREAM.md](assets/digimon-up/UPSTREAM.md) explains the frame names and animation sequences.
-
-The partner still uses the dot sprites described above. See [CREDITS.md](CREDITS.md) for the collection's source revision and attribution.
+The full original collection remains in [assets/digimon-up/](assets/digimon-up/). [UPSTREAM.md](assets/digimon-up/UPSTREAM.md) explains its frame names and animation sequences.
 
 ## Development
 
@@ -66,7 +80,7 @@ npm run typecheck
 claude --plugin-dir .     # run a session with the working copy
 ```
 
-`npm run sprites:fetch` downloads the roster's sheets into `sprites/`, and `npm run sprites:build` regenerates `src/sprites.generated.ts` from them. The build fails when a sheet lacks a frame the partner needs.
+`npm run sprites:fetch` downloads the dot sheets into `sprites/`. `npm run sprites:build` regenerates the sprite data from the bundled dot sheets and Digimon UP collection. The build fails on missing or empty frames and incomplete mapped animation sequences.
 
 The game logic in `src/` is plain TypeScript with no host API. Only `hooks/` talks to Claude Code, so another agent harness needs only its own adapter.
 

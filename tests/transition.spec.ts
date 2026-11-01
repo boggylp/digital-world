@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { readPixels, type Sheet } from '../src/sprite.ts';
+import { readStillPixels } from '../src/animation.ts';
+import { placeDotPixels, readPixels, type Sheet } from '../src/sprite.ts';
 import { SHEETS } from '../src/sprites.generated.ts';
 import { createDigivolution, createHatching, findScenePixels } from '../src/transition.ts';
 
@@ -18,31 +19,39 @@ function listSceneColors(scene: ReturnType<typeof createDigivolution>): (number 
 
 describe('createDigivolution', () => {
   test('createDigivolution_AgumonToGreymon_OpensOnAgumon', () => {
-    const scene = createDigivolution(readSheet('Agumon'), readSheet('Greymon'), true);
-    expect(findScenePixels(scene, 0)).toEqual(readPixels(readSheet('Agumon'), 0, false));
+    const scene = createDigivolution(readStillPixels('Agumon'), readStillPixels('Greymon'), true);
+    expect(findScenePixels(scene, 0)).toEqual(readStillPixels('Agumon'));
   });
 
   test('createDigivolution_AgumonToGreymon_EndsOnGreymon', () => {
-    const scene = createDigivolution(readSheet('Agumon'), readSheet('Greymon'), true);
-    expect(scene.at(-1)?.pixels).toEqual(readPixels(readSheet('Greymon'), 0, false));
+    const scene = createDigivolution(readStillPixels('Agumon'), readStillPixels('Greymon'), true);
+    expect(scene.at(-1)?.pixels).toEqual(readStillPixels('Greymon'));
   });
 
   test('createDigivolution_Rising_Sparkles', () => {
-    const scene = createDigivolution(readSheet('Agumon'), readSheet('Greymon'), true);
+    const scene = createDigivolution(readStillPixels('Agumon'), readStillPixels('Greymon'), true);
     expect(listSceneColors(scene)).toContain(GOLD_SPARKLE);
   });
 
   test('createDigivolution_Falling_HasNoSparkles', () => {
-    const scene = createDigivolution(readSheet('Greymon'), readSheet('Agumon'), false);
+    const scene = createDigivolution(readStillPixels('Greymon'), readStillPixels('Agumon'), false);
     expect(listSceneColors(scene)).not.toContain(GOLD_SPARKLE);
+  });
+
+  test('createDigivolution_DotBabyToUpRookie_PreservesCanvas', () => {
+    const scene = createDigivolution(readStillPixels('Pyocomon'), readStillPixels('Piyomon'), true);
+    const dimensions = new Set(
+      scene.flatMap(({ pixels }) => pixels.map((row) => `${pixels.length}x${row.length}`))
+    );
+    expect(dimensions).toEqual(new Set(['16x24']));
   });
 });
 
 describe('createHatching', () => {
   test('createHatching_AgumonEgg_ShowsCrackedShell', () => {
-    const scene = createHatching(readSheet('Agu_Digitama'), readSheet('Botamon'));
+    const scene = createHatching(readSheet('Agu_Digitama'), readStillPixels('Botamon'));
     expect(scene.map((step) => step.pixels)).toContainEqual(
-      readPixels(readSheet('Agu_Digitama'), 2, false)
+      placeDotPixels(readPixels(readSheet('Agu_Digitama'), 2, false))
     );
   });
 });

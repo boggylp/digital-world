@@ -1,5 +1,12 @@
 export const FRAME_SIZE = 16;
-export const SPRITE_ROWS = FRAME_SIZE / 2;
+export const SPRITE_COLUMNS = 24;
+export const SPRITE_HEIGHT = 16;
+export const SPRITE_ROWS = SPRITE_HEIGHT / 2;
+export const IMAGE_COLUMNS = 8;
+export const IMAGE_ROWS = 4;
+export type Canvas = { columns: number; height: number };
+export const SPRITE_CANVAS: Canvas = { columns: SPRITE_COLUMNS, height: SPRITE_HEIGHT };
+export const IMAGE_CANVAS: Canvas = { columns: 80, height: 80 };
 
 export const FRAMES = {
   walk: [0, 1],
@@ -23,6 +30,72 @@ export type Sheet = { palette: number[]; frames: string[] };
 
 export type Pixel = number | null;
 
+export type Animations = Canvas & { palette: number[]; walking: string[]; idle: string[] };
+
+export function packAnimations(walking: Pixel[][][], idle: Pixel[][][]): Animations {
+  const palette: number[] = [];
+  const symbols = new Map<number, string>();
+  function packFrame(frame: Pixel[][]): string {
+    return frame
+      .flat()
+      .map((pixel) => {
+        if (pixel === null) return ' ';
+        const existing = symbols.get(pixel);
+        if (existing !== undefined) return existing;
+        if (palette.length >= 0xd800 - 33) {
+          throw new Error('Animation palette exceeds single-character encoding');
+        }
+        const symbol = String.fromCodePoint(palette.length + 33);
+        palette.push(pixel);
+        symbols.set(pixel, symbol);
+        return symbol;
+      })
+      .join('');
+  }
+  return {
+    columns: walking[0]?.[0]?.length ?? 0,
+    height: walking[0]?.length ?? 0,
+    palette,
+    walking: walking.map((frame) => packFrame(frame)),
+    idle: idle.map((frame) => packFrame(frame))
+  };
+}
+
+export function readAnimationPixels(animation: Animations, frame: string): Pixel[][] {
+  return Array.from({ length: animation.height }, (_row, row) =>
+    Array.from(
+      { length: animation.columns },
+      (_column, column) =>
+        animation.palette[(frame.codePointAt(row * animation.columns + column) ?? 32) - 33] ?? null
+    )
+  );
+}
+
+export function placeDotPixels(pixels: Pixel[][], canvas: Canvas = SPRITE_CANVAS): Pixel[][] {
+  const scale = Math.floor(Math.min(canvas.columns, canvas.height) / FRAME_SIZE);
+  const left = Math.floor((canvas.columns - FRAME_SIZE * scale) / 2);
+  const top = canvas.height - FRAME_SIZE * scale;
+  return Array.from({ length: canvas.height }, (_row, row) =>
+    Array.from(
+      { length: canvas.columns },
+      (_column, column) =>
+        pixels[Math.floor((row - top) / scale)]?.[Math.floor((column - left) / scale)] ?? null
+    )
+  );
+}
+
+export function encodeImagePixels(pixels: Pixel[][]): string {
+  const bytes = new Uint8Array(pixels.length * (pixels[0]?.length ?? 0) * 4);
+  let offset = 0;
+  for (const row of pixels) {
+    for (const pixel of row) {
+      if (pixel !== null) bytes.set([pixel >> 16, pixel >> 8, pixel, 255], offset);
+      offset += 4;
+    }
+  }
+  return btoa(String.fromCodePoint(...bytes));
+}
+
 export function readPixels(sheet: Sheet, frame: number, isMirrored: boolean): Pixel[][] {
   const pixels = sheet.frames[frame];
   if (pixels === undefined) throw new Error(`No frame ${frame}`);
@@ -45,17 +118,15 @@ export function encodePixels(pixels: Pixel[][]): string {
   return btoa(String.fromCodePoint(...new Uint8Array(packHalfBlocks(pixels).buffer)));
 }
 
-export function encodeFrame(sheet: Sheet, frame: number, isMirrored: boolean): string {
-  return encodePixels(readPixels(sheet, frame, isMirrored));
-}
-
 export function packHalfBlocks(pixels: Pixel[][]): Uint32Array {
-  const cells = new Uint32Array(FRAME_SIZE * SPRITE_ROWS * 3);
-  for (let row = 0; row < SPRITE_ROWS; row++) {
-    for (let column = 0; column < FRAME_SIZE; column++) {
+  const columns = pixels[0]?.length ?? 0;
+  const rows = Math.ceil(pixels.length / 2);
+  const cells = new Uint32Array(columns * rows * 3);
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
       const top = pixels[row * 2]?.[column] ?? null;
       const bottom = pixels[row * 2 + 1]?.[column] ?? null;
-      cells.set(packCell(top, bottom), (row * FRAME_SIZE + column) * 3);
+      cells.set(packCell(top, bottom), (row * columns + column) * 3);
     }
   }
   return cells;

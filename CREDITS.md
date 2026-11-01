@@ -8,7 +8,7 @@ They are full-color versions of the dot sprites from Bandai's Digimon virtual pe
 
 ## Digimon UP collection
 
-The collection in `assets/digimon-up/` is available for sprite experiments, with the original images kept at full resolution. It comes from [dannyphang/digimon-up-sprites](https://github.com/dannyphang/digimon-up-sprites/tree/a924c32404f86e2cde11f5420d2980e693aa2f02), revision `a924c32404f86e2cde11f5420d2980e693aa2f02`.
+The collection in `assets/digimon-up/` supplies the animations in `src/up-sprites.generated.ts` and `src/up-images/`. The original images remain at full resolution. It comes from [dannyphang/digimon-up-sprites](https://github.com/dannyphang/digimon-up-sprites/tree/a924c32404f86e2cde11f5420d2980e693aa2f02), revision `a924c32404f86e2cde11f5420d2980e693aa2f02`.
 
 The upstream README is preserved as [UPSTREAM.md](assets/digimon-up/UPSTREAM.md), alongside the animation table and correction metadata. It attributes the artwork to Bandai Namco and describes the collection as a non-commercial fan project shared for fan use only. This project's MIT license excludes these assets.
 

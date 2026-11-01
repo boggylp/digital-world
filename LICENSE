@@ -21,5 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 This license does not cover the sprite artwork in sprites/ and
-src/sprites.generated.ts, or the upstream collection in assets/digimon-up/.
+src/sprites.generated.ts, the generated data in src/up-sprites.generated.ts
+and src/up-images/, or the upstream collection in assets/digimon-up/.
 See CREDITS.md.

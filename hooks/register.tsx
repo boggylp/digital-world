@@ -1,17 +1,25 @@
 import type { EngineInterface, On, Register } from 'claude-code';
 
+import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
 import {
   callPartner,
   createPartner,
   hatchPartner,
   measurePartner,
-  nameForm,
   reactPartner,
-  selectFrame,
   type Partner
 } from '../src/partner.ts';
 import { DEFAULT_LINE, findLine, LINES, STAGES, type Line } from '../src/roster.ts';
-import { encodeFrame, encodePixels, FRAME_SIZE, SPRITE_ROWS, type Pixel } from '../src/sprite.ts';
+import {
+  encodeImagePixels,
+  encodePixels,
+  IMAGE_CANVAS,
+  IMAGE_COLUMNS,
+  IMAGE_ROWS,
+  SPRITE_COLUMNS,
+  SPRITE_ROWS,
+  type Pixel
+} from '../src/sprite.ts';
 import { SHEETS } from '../src/sprites.generated.ts';
 import {
   createDigivolution,
@@ -25,7 +33,6 @@ const STORE_KEY = 'partner';
 const TICK_MS = 100;
 const BEAT_TICKS = 5;
 const MEASURE_EVERY_TICKS = 20;
-const TURN_TICKS = 80;
 const QUESTION_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 const ALERT_NOTIFICATIONS = new Set([
   'permission_prompt',
@@ -48,20 +55,23 @@ let sceneStart = 0;
 let sceneTarget: Partner | null = null;
 let isTicking = false;
 let isErrorLogged = false;
+let isImage = false;
 const encodedScenes = new WeakMap<Pixel[][], string>();
-const encodedFrames = new Map<string, string>();
 
 function countBeats(): number {
   return Math.floor(tick / BEAT_TICKS);
 }
 
-function createTransition(source: Partner, target: Partner): Scene | null {
-  const before = SHEETS[source.line.forms[source.stage]];
-  const after = SHEETS[target.line.forms[target.stage]];
-  if (before === undefined || after === undefined) return null;
-  if (source.stage === 'Digitama') return createHatching(before, after);
+function createTransition(source: Partner, target: Partner): Scene {
+  const before = source.line.forms[source.stage];
+  const after = readStillPixels(target.line.forms[target.stage], isImage);
+  if (source.stage === 'Digitama') {
+    const egg = SHEETS[before];
+    if (egg === undefined) throw new Error(`No egg sprite for ${before}`);
+    return createHatching(egg, after);
+  }
   const isRising = STAGES.indexOf(target.stage) > STAGES.indexOf(source.stage);
-  return createDigivolution(before, after, isRising);
+  return createDigivolution(readStillPixels(before, isImage), after, isRising);
 }
 
 function startScene(source: Partner, target: Partner): void {
@@ -83,6 +93,21 @@ function advanceScene(): void {
   if (reached !== null && reached.stage !== partner.stage) startScene(reached, partner);
 }
 
+async function readImageSupport(engine: EngineInterface): Promise<boolean> {
+  const [terminal, kitty, forced] = await Promise.all([
+    engine.env.get('TERM_PROGRAM'),
+    engine.env.get('KITTY_WINDOW_ID'),
+    engine.env.get('CLAUDE_CODE_FORCE_TERMINAL_IMAGES')
+  ]);
+  return (
+    forced === '1' || Boolean(kitty) || ['ghostty', 'kitty', 'iTerm.app'].includes(terminal ?? '')
+  );
+}
+
+function createImageSource(rgba: string) {
+  return { rgba, width: IMAGE_CANVAS.columns, height: IMAGE_CANVAS.height };
+}
+
 async function readSavedLine(engine: EngineInterface): Promise<Line> {
   const saved: unknown = await engine.store.get(STORE_KEY).catch(() => null);
   return (typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE;
@@ -100,7 +125,7 @@ async function hatchSavedPartner(engine: EngineInterface): Promise<void> {
 function encodeScenePixels(pixels: Pixel[][]): string {
   const cached = encodedScenes.get(pixels);
   if (cached !== undefined) return cached;
-  const cells = encodePixels(pixels);
+  const cells = isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
   encodedScenes.set(pixels, cells);
   return cells;
 }
@@ -108,17 +133,8 @@ function encodeScenePixels(pixels: Pixel[][]): string {
 function encodeCells(): string {
   const scenePixels = scene === null ? null : findScenePixels(scene, tick - sceneStart);
   if (scenePixels !== null) return encodeScenePixels(scenePixels);
-  const form = partner.line.forms[partner.stage];
-  const frame = selectFrame(partner, countBeats());
-  const isMirrored = Math.floor(tick / TURN_TICKS) % 2 === 1;
-  const key = `${form}:${frame}:${isMirrored}`;
-  const cached = encodedFrames.get(key);
-  if (cached !== undefined) return cached;
-  const sheet = SHEETS[form];
-  if (sheet === undefined) throw new Error(`No sprite for ${nameForm(partner)}`);
-  const cells = encodeFrame(sheet, frame, isMirrored);
-  encodedFrames.set(key, cells);
-  return cells;
+  const pixels = readPartnerPixels(partner, tick, isImage);
+  return isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
 }
 
 async function measureContext(engine: EngineInterface): Promise<void> {
@@ -132,8 +148,16 @@ async function blitFrame(engine: EngineInterface): Promise<void> {
   const cells = encodeCells();
   if (cells === sentCells) return;
   sentCells = cells;
-  const result = await engine.ui.blit({ requestId: bandId, key: RASTER_KEY, cells });
+  const address = { requestId: bandId, key: RASTER_KEY };
+  const result = await engine.ui.blit(
+    isImage ? { ...address, source: createImageSource(cells) } : { ...address, cells }
+  );
   if (result.deny === undefined) return;
+  if (isImage) {
+    isImage = false;
+    scene = null;
+    sceneTarget = null;
+  }
   bandId = null;
   sentCells = null;
   engine.ui.invalidate('ui.render');
@@ -157,6 +181,7 @@ async function runTick(engine: EngineInterface): Promise<void> {
 
 function registerLifecycleHooks(hook: On): void {
   hook('session.start', async (engine, event, next) => {
+    isImage = await readImageSupport(engine);
     await hatchSavedPartner(engine);
     await engine.command.register({
       name: 'agent-digitama',
@@ -231,17 +256,28 @@ function registerReactionHooks(hook: On): void {
 
 function registerBandHook(hook: On): void {
   hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, next) => {
-    const isRoomy = event.props.maxRows >= SPRITE_ROWS && event.props.bodyColumns > FRAME_SIZE;
+    const theirs = await next(event);
+    const columns = isImage ? IMAGE_COLUMNS : SPRITE_COLUMNS;
+    const rows = isImage ? IMAGE_ROWS : SPRITE_ROWS;
+    const isRoomy = event.props.maxRows >= rows && event.props.bodyColumns >= columns;
     if (event.surface !== 'terminal' || event.props.hasSurvey || !isRoomy) {
       bandId = null;
-      return next(event);
+      return theirs;
     }
     bandId = event.requestId;
-    sentCells = encodeCells();
-    const { Box, Raster } = engine.ui.resolve(event);
-    const theirs = await next(event);
-    const corner = (
-      <Raster key={RASTER_KEY} columns={FRAME_SIZE} rows={SPRITE_ROWS} cells={sentCells} />
+    const cells = encodeCells();
+    sentCells = isImage ? null : cells;
+    const { Box, Raster, Image } = engine.ui.resolve(event);
+    const corner = isImage ? (
+      <Image
+        key={RASTER_KEY}
+        columns={columns}
+        rows={rows}
+        source={createImageSource(cells)}
+        alt={partner.line.forms[partner.stage]}
+      />
+    ) : (
+      <Raster key={RASTER_KEY} columns={columns} rows={rows} cells={cells} />
     );
     if (!theirs) return corner;
     return (

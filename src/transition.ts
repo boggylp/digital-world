@@ -1,4 +1,4 @@
-import { FRAMES, readPixels, type Pixel, type Sheet } from './sprite.ts';
+import { placeDotPixels, FRAMES, readPixels, type Pixel, type Sheet } from './sprite.ts';
 
 export type Scene = { pixels: Pixel[][]; ticks: number }[];
 
@@ -39,10 +39,8 @@ function blendPixels(
   );
 }
 
-export function createDigivolution(source: Sheet, target: Sheet, isRising: boolean): Scene {
+export function createDigivolution(before: Pixel[][], after: Pixel[][], isRising: boolean): Scene {
   const random = createRandom(SEED);
-  const before = readPixels(source, FRAMES.walk[0], false);
-  const after = readPixels(target, FRAMES.walk[0], false);
   const flashes = [1, 2, 3].flatMap(() => [
     { pixels: before, ticks: 3 },
     { pixels: paintSilhouette(before), ticks: 1 }
@@ -66,12 +64,12 @@ export function createDigivolution(source: Sheet, target: Sheet, isRising: boole
   return [...flashes, ...morph, ...reveal, { pixels: after, ticks: 1 }];
 }
 
-export function createHatching(egg: Sheet, baby: Sheet): Scene {
+export function createHatching(egg: Sheet, babyPixels: Pixel[][]): Scene {
   const random = createRandom(SEED);
-  const babyPixels = readPixels(baby, FRAMES.walk[0], false);
-  const cracked = readPixels(egg, FRAMES.crack[0], false);
+  const canvas = { columns: babyPixels[0]?.length ?? 0, height: babyPixels.length };
+  const cracked = placeDotPixels(readPixels(egg, FRAMES.crack[0], false), canvas);
   const wobble = Array.from({ length: 6 }, (_step, step) => ({
-    pixels: readPixels(egg, FRAMES.egg[step % 2] ?? 0, false),
+    pixels: placeDotPixels(readPixels(egg, FRAMES.egg[step % 2] ?? 0, false), canvas),
     ticks: step < 3 ? 2 : 1
   }));
   const burst = [1, 2, 3].map(() => ({

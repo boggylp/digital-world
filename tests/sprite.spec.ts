@@ -1,10 +1,13 @@
-import { describe, expect, test } from 'vitest';
+import { assert, describe, expect, test } from 'vitest';
 
 import { LINES } from '../src/roster.ts';
 import {
   DEFAULT_COLOR,
   FRAMES,
+  encodeImagePixels,
+  packAnimations,
   packHalfBlocks,
+  readAnimationPixels,
   readPixels,
   REQUIRED_FRAMES,
   TRANSPARENT,
@@ -26,6 +29,38 @@ function createSheet(firstRow: string, secondRow: string): Sheet {
 function readCell(cells: Uint32Array, column: number): number[] {
   return [...cells.subarray(column * 3, column * 3 + 3)];
 }
+
+describe('animation encoding', () => {
+  test('encodeImagePixels_ColorsAndTransparency_ProducesRgbaBytes', () => {
+    const bytes = Buffer.from(encodeImagePixels([[0x123456, null, 0]]), 'base64');
+    expect([...bytes]).toEqual([18, 52, 86, 255, 0, 0, 0, 0, 0, 0, 0, 255]);
+  });
+
+  test('readAnimationPixels_KnownSymbols_PreservesBlackColorAndTransparency', () => {
+    const pixels = readAnimationPixels(
+      { columns: 4, height: 1, palette: [0, RED, BLUE], walking: [], idle: [] },
+      '! "#'
+    );
+    expect(pixels[0]?.slice(0, 4)).toEqual([0, null, RED, BLUE]);
+  });
+
+  test('packAnimations_MultipleFrames_RoundTripsColorsAndTransparency', () => {
+    const packed = packAnimations([[[0, null, RED]], [[BLUE, 0, null]]], [[[null, RED, BLUE]]]);
+    const [firstFrame, secondFrame] = packed.walking;
+    const [idleFrame] = packed.idle;
+    assert.isDefined(firstFrame);
+    assert.isDefined(secondFrame);
+    assert.isDefined(idleFrame);
+    const first = readAnimationPixels(packed, firstFrame);
+    const second = readAnimationPixels(packed, secondFrame);
+    const idle = readAnimationPixels(packed, idleFrame);
+    expect([first[0]?.slice(0, 3), second[0]?.slice(0, 3), idle[0]?.slice(0, 3)]).toEqual([
+      [0, null, RED],
+      [BLUE, 0, null],
+      [null, RED, BLUE]
+    ]);
+  });
+});
 
 describe('packHalfBlocks', () => {
   test('packHalfBlocks_BothPixelsOpaque_DrawsUpperHalfOverBottom', () => {
