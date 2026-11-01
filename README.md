@@ -50,6 +50,12 @@ The 16×16 sprites are Tortoiseshel's [Full Color Digimon Dot Sprites](https://w
 
 A line joins the roster only when the set has every stage from egg to Mega. Tentomon, Gomamon and Patamon lack a Baby I sprite.
 
+## Sprite experiments
+
+The full [Digimon UP sprite collection](https://github.com/dannyphang/digimon-up-sprites) is available in [assets/digimon-up/](assets/digimon-up/) for trying more characters and animations. The original images retain their full resolution. [UPSTREAM.md](assets/digimon-up/UPSTREAM.md) explains the frame names and animation sequences.
+
+The partner still uses the dot sprites described above. See [CREDITS.md](CREDITS.md) for the collection's source revision and attribution.
+
 ## Development
 
 ```sh
