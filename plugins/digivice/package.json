@@ -1,0 +1,12 @@
+{
+  "name": "digivice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "image:build": "node scripts/build-demo-image.ts",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.json",
+    "lint": "oxlint src scripts tests hooks",
+    "test": "vitest run"
+  }
+}

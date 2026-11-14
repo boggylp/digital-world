@@ -1,5 +1,9 @@
 {
-  "name": "agent-digitama",
+  "name": "digital-world",
   "owner": { "name": "boggylp" },
-  "plugins": [{ "name": "agent-digitama", "source": "./" }]
+  "description": "Digimon Adventure flavored mods for Claude Code",
+  "plugins": [
+    { "name": "agent-digitama", "source": "./plugins/agent-digitama", "description": "A pixel partner above the prompt that digivolves as the context window fills" },
+    { "name": "digivice", "source": "./plugins/digivice", "description": "A watercolor-sky look with charts, flow graphs, inline images and clickable paths" }
+  ]
 }
