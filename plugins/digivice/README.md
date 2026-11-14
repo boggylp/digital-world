@@ -1,6 +1,6 @@
 # digivice
 
-A Digital World look for Claude Code. Replies get watercolor-sky colors, and the terminal draws charts, flow graphs and images where Claude would print their source.
+A Digital World look for Claude Code. In the terminal, headings, code, charts, flow graphs and images in replies get summer-sky colors, while plain prose keeps your terminal theme.
 
 ## Install
 
