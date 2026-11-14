@@ -8,19 +8,14 @@ const WORDS = [
   ['Decoding', 'Decoded'],
   ['Adventuring', 'Adventured']
 ] as const;
+const HASH_MULTIPLIER = 31;
+const HASH_SEED = 7;
 
-function hashWord(word: string): number {
-  return [...word].reduce((hash, character) => (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0, 7);
-}
+const hashWord = (word: string): number =>
+  [...word].reduce((hash, character) => (hash * HASH_MULTIPLIER + (character.codePointAt(0) ?? 0)) >>> 0, HASH_SEED);
 
-function pickPair(word: string): (typeof WORDS)[number] {
-  return WORDS[hashWord(word) % WORDS.length] ?? WORDS[0];
-}
+const pickPair = (word: string): (typeof WORDS)[number] => WORDS[hashWord(word) % WORDS.length] ?? WORDS[0];
 
-export function pickPresentWord(word: string): string {
-  return pickPair(word)[0];
-}
+export const pickPresentWord = (word: string): string => pickPair(word)[0];
 
-export function pickPastWord(word: string): string {
-  return pickPair(word)[1];
-}
+export const pickPastWord = (word: string): string => pickPair(word)[1];

@@ -1,0 +1,135 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "node",
+    "promise",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error"
+  },
+  "rules": {
+    "complexity": "error",
+    "curly": [
+      "error",
+      "multi-line"
+    ],
+    "one-var": [
+      "error",
+      "never"
+    ],
+    "new-cap": [
+      "error",
+      {
+        "capIsNew": false
+      }
+    ],
+    "typescript/consistent-type-assertions": [
+      "error",
+      {
+        "assertionStyle": "as",
+        "objectLiteralTypeAssertions": "never",
+        "arrayLiteralTypeAssertions": "never"
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "id-length": [
+      "error",
+      {
+        "min": 3,
+        "properties": "never",
+        "exceptions": [
+          "id",
+          "Id",
+          "pr",
+          "pi",
+          "me"
+        ],
+        "exceptionPatterns": [
+          "^[A-Z]$"
+        ]
+      }
+    ],
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [
+          -1,
+          0,
+          1
+        ],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreClassFieldInitialValues": true,
+        "ignoreEnums": true,
+        "ignoreNumericLiteralTypes": true,
+        "ignoreReadonlyClassProperties": true,
+        "ignoreTypeIndexes": true,
+        "enforceConst": true
+      }
+    ],
+    "no-await-in-loop": "off",
+    "oxc/no-map-spread": "off",
+    "max-statements": [
+      "error",
+      {
+        "max": 20
+      }
+    ],
+    "max-params": [
+      "error",
+      {
+        "max": 7
+      }
+    ],
+    "sort-imports": "off",
+    "sort-keys": "off",
+    "no-ternary": "off",
+    "unicorn/no-null": "off",
+    "vitest/prefer-expect-assertions": "off",
+    "vitest/require-hook": "off",
+    "vitest/no-hooks": "off",
+    "vitest/prefer-importing-vitest-globals": "off",
+    "typescript/consistent-type-definitions": "off",
+    "vitest/prefer-import-in-mock": "off",
+    "vitest/prefer-describe-function-title": "off",
+    "vitest/prefer-to-be-truthy": "off",
+    "vitest/prefer-to-be-falsy": "off",
+    "vitest/prefer-called-times": "off",
+    "vitest/require-top-level-describe": "off",
+    "unicorn/number-literal-case": "off",
+    "unicorn/prefer-structured-clone": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/tests/**",
+        "**/*.test.*"
+      ],
+      "rules": {
+        "no-magic-numbers": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.test.*"
+      ],
+      "rules": {
+        "vitest/require-top-level-describe": "error"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/*.generated.ts",
+    "**/hooks/make-colors.js"
+  ]
+}

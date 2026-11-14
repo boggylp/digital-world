@@ -51,7 +51,7 @@ Images draw in Ghostty, kitty, WezTerm and iTerm2 outside tmux. Set [`CLAUDE_COD
 
 ```sh
 npm install                # at the repository root
-npm test                   # unit tests (vitest)
+npm test                   # at the repository root: unit tests in tests/digivice
 claude plugin test .       # mod tests against the engine
 npm run typecheck
 claude --plugin-dir .      # a session with the working copy

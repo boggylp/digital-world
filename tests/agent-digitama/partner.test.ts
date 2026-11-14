@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+
 
 import {
   callPartner,
@@ -9,15 +9,16 @@ import {
   reactPartner,
   selectFrame,
   type Partner
-} from '../src/partner.ts';
-import { DEFAULT_LINE, type Stage } from '../src/roster.ts';
+} from '../../plugins/agent-digitama/src/partner.ts';
+import { DEFAULT_LINE, type Stage } from '../../plugins/agent-digitama/src/roster.ts';
 
-function createAgumon(stage: Stage = 'Digitama'): Partner {
-  return { ...createPartner(DEFAULT_LINE), stage };
-}
+const createAgumon = (stage: Stage = 'Digitama'): Partner => ({
+  ...createPartner(DEFAULT_LINE),
+  stage
+});
 
 describe('measurePartner', () => {
-  test.each([
+  it.each([
     [0, 'Baby I'],
     [4.9, 'Baby I'],
     [5, 'Baby II'],
@@ -34,53 +35,58 @@ describe('measurePartner', () => {
     expect(measurePartner(createAgumon('Baby I'), percent).stage).toBe(stage);
   });
 
-  test('measurePartner_EggBeforeFirstPrompt_StaysEgg', () => {
+  it('measurePartner_EggBeforeFirstPrompt_StaysEgg', () => {
     expect(measurePartner(createAgumon(), 60).stage).toBe('Digitama');
   });
 
-  test('measurePartner_MegaAfterCompactionTo20_DeDigivolvesToRookie', () => {
+  it('measurePartner_MegaAfterCompactionTo20_DeDigivolvesToRookie', () => {
     expect(measurePartner(createAgumon('Mega'), 20).stage).toBe('Rookie');
   });
 
-  test('measurePartner_MegaAfterCompactionTo40_DeDigivolvesToChampion', () => {
+  it('measurePartner_MegaAfterCompactionTo40_DeDigivolvesToChampion', () => {
     expect(measurePartner(createAgumon('Mega'), 40).stage).toBe('Champion');
   });
 
-  test('measurePartner_RookieAtZero_KeepsRookieFloor', () => {
+  it('measurePartner_RookieAtZero_KeepsRookieFloor', () => {
     expect(measurePartner(createAgumon('Rookie'), 0).stage).toBe('Rookie');
   });
 });
 
 describe('hatchPartner', () => {
-  test('hatchPartner_EggOnFirstPrompt_HatchesToBabyI', () => {
+  it('hatchPartner_EggOnFirstPrompt_HatchesToBabyI', () => {
     expect(hatchPartner(createAgumon(), 2).stage).toBe('Baby I');
   });
 
-  test('hatchPartner_CallingPartner_StopsCalling', () => {
-    expect(hatchPartner(callPartner(createAgumon('Rookie'), true), 12).isCalling).toBe(false);
+  it('hatchPartner_CallingPartner_StopsCalling', () => {
+    const calling = callPartner(createAgumon('Rookie'), true);
+    expect(hatchPartner(calling, 12).isCalling).toBe(false);
   });
 });
 
 describe('selectFrame', () => {
-  test('selectFrame_CallingPartner_ShowsAngryFrame', () => {
-    expect(selectFrame(callPartner(createAgumon('Rookie'), true), 3)).toBe(8);
+  it('selectFrame_CallingPartner_ShowsAngryFrame', () => {
+    const calling = callPartner(createAgumon('Rookie'), true);
+    expect(selectFrame(calling, 3)).toBe(8);
   });
 
-  test('selectFrame_HurtPartner_ShowsHurtFrame', () => {
-    expect(selectFrame(reactPartner(createAgumon('Rookie'), 'hurt', 10), 10)).toBe(9);
+  it('selectFrame_HurtPartner_ShowsHurtFrame', () => {
+    const hurt = reactPartner(createAgumon('Rookie'), 'hurt', 10);
+    expect(selectFrame(hurt, 10)).toBe(9);
   });
 
-  test('selectFrame_HappyPartnerAfterReaction_WalksAgain', () => {
-    expect(selectFrame(reactPartner(createAgumon('Rookie'), 'happy', 0), 7)).toBe(1);
+  it('selectFrame_HappyPartnerAfterReaction_WalksAgain', () => {
+    const happy = reactPartner(createAgumon('Rookie'), 'happy', 0);
+    expect(selectFrame(happy, 7)).toBe(1);
   });
 
-  test('selectFrame_EggReactingToFailure_KeepsWobbling', () => {
-    expect(selectFrame(reactPartner(createAgumon(), 'hurt', 0), 1)).toBe(1);
+  it('selectFrame_EggReactingToFailure_KeepsWobbling', () => {
+    const egg = reactPartner(createAgumon(), 'hurt', 0);
+    expect(selectFrame(egg, 1)).toBe(1);
   });
 });
 
 describe('nameForm', () => {
-  test.each([
+  it.each([
     ['Digitama', 'Digitama'],
     ['Rookie', 'Agumon'],
     ['Mega', 'WarGreymon']
@@ -88,7 +94,7 @@ describe('nameForm', () => {
     expect(nameForm(createAgumon(stage))).toBe(name);
   });
 
-  test('nameForm_VeemonMega_UsesDubName', () => {
+  it('nameForm_VeemonMega_UsesDubName', () => {
     const line = {
       partner: 'Veemon',
       forms: { ...DEFAULT_LINE.forms, Mega: 'Imperialdramon_Fighter' }

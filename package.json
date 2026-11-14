@@ -4,9 +4,9 @@
   "type": "module",
   "workspaces": ["plugins/*"],
   "scripts": {
-    "typecheck": "npm run typecheck --workspaces",
-    "lint": "npm run lint --workspaces",
-    "test": "npm test --workspaces"
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces",
+    "lint": "oxlint",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

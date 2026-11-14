@@ -4,28 +4,29 @@ import { pickSeriesColor, VIBES } from './palette.ts';
 export type Edge = { from: string; to: string; label?: string };
 export type Graph = { nodes: Map<string, string>; edges: Edge[] };
 
-const PLAIN_ARROW = /\s*(?:-->|->|→|⟶|=>)\s*/;
-const MERMAID_ARROW = /\s*(?:-->|---|==>|-\.->|-\.-)\s*(?:\|([^|]*)\|\s*)?/;
-const MERMAID_NODE = /^([\w-]+)\s*(?:[[({>]+\s*"?(.*?)"?\s*[\])}]+)?$/;
-const MERMAID_SKIPPED = /^(graph|flowchart|subgraph|end\b|style\b|classDef\b|class\b|click\b|linkStyle\b|%%)/;
+const PLAIN_ARROW = /\s*(?:-->|->|→|⟶|=>)\s*/u;
+const MERMAID_ARROW = /\s*(?:-->|---|==>|-\.->|-\.-)\s*(?:\|(?<label>[^|]*)\|\s*)?/u;
+const MERMAID_NODE = /^(?<id>[\w-]+)\s*(?:[[({>]+\s*"?(?<label>.*?)"?\s*[\])}]+)?$/u;
+const MERMAID_SKIPPED = /^(?:graph|flowchart|subgraph|end\b|style\b|classDef\b|class\b|click\b|linkStyle\b|%%)/u;
 const MAX_NODES = 200;
+const PARTS_PER_STEP = 2;
 
-function addNode(graph: Graph, id: string, label?: string): void {
+const addNode = (graph: Graph, id: string, label?: string): void => {
   if (!graph.nodes.has(id) || label) graph.nodes.set(id, label || graph.nodes.get(id) || id);
-}
+};
 
-function parsePlainLine(graph: Graph, line: string): void {
+const parsePlainLine = (graph: Graph, line: string): void => {
   const names = line.split(PLAIN_ARROW).map(name => name.trim()).filter(Boolean);
   names.forEach(name => addNode(graph, name));
-  names.slice(1).forEach((to, index) => graph.edges.push({ from: names[index] ?? to, to }));
-}
+  names.slice(1).forEach((target, index) => graph.edges.push({ from: names[index] ?? target, to: target }));
+};
 
-function parseMermaidLine(graph: Graph, line: string): void {
+const parseMermaidLine = (graph: Graph, line: string): void => {
   const parts = line.split(MERMAID_ARROW);
   const ids: string[] = [];
   const labels: (string | undefined)[] = [];
   parts.forEach((part, index) => {
-    if (index % 2 === 1) {
+    if (index % PARTS_PER_STEP === 1) {
       labels.push(part?.trim() || undefined);
       return;
     }
@@ -34,23 +35,23 @@ function parseMermaidLine(graph: Graph, line: string): void {
     addNode(graph, node[1], node[2]?.trim());
     ids.push(node[1]);
   });
-  ids.slice(1).forEach((to, index) => {
+  ids.slice(1).forEach((target, index) => {
     const label = labels[index];
-    graph.edges.push({ from: ids[index] ?? to, to, ...(label ? { label } : {}) });
+    graph.edges.push({ from: ids[index] ?? target, to: target, ...(label ? { label } : {}) });
   });
-}
+};
 
-export function parseGraph(source: string, dialect: 'flow' | 'mermaid'): Graph {
+export const parseGraph = (source: string, dialect: 'flow' | 'mermaid'): Graph => {
   const graph: Graph = { nodes: new Map(), edges: [] };
   source
     .split('\n')
-    .map(line => line.trim().replace(/;$/, ''))
+    .map(line => line.trim().replace(/;$/u, ''))
     .filter(line => line && !(dialect === 'mermaid' && MERMAID_SKIPPED.test(line)))
     .forEach(line => (dialect === 'mermaid' ? parseMermaidLine(graph, line) : parsePlainLine(graph, line)));
   return graph;
-}
+};
 
-export function renderGraph(graph: Graph): Line[] {
+export const renderGraph = (graph: Graph): Line[] => {
   const children = new Map<string, Edge[]>();
   graph.edges.forEach(edge => children.set(edge.from, [...(children.get(edge.from) ?? []), edge]));
   const targets = new Set(graph.edges.map(edge => edge.to));
@@ -77,4 +78,4 @@ export function renderGraph(graph: Graph): Line[] {
     if (!visited.has(id)) visit(id, '', '', 0);
   });
   return lines;
-}
+};

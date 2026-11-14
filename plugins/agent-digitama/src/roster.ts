@@ -92,7 +92,7 @@ export const LINES: readonly Line[] = [
   }
 ];
 
-export function findLine(partner: string): Line | null {
+export const findLine = (partner: string): Line | null => {
   const wanted = partner.toLowerCase();
   return LINES.find((line) => line.partner.toLowerCase() === wanted) ?? null;
-}
+};

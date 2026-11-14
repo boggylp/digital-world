@@ -1,7 +1,3 @@
-export function toSlashes(path: string): string {
-  return path.replaceAll('\\', '/');
-}
+export const toSlashes = (path: string): string => path.replaceAll('\\', '/');
 
-export function expandHome(path: string, home: string): string {
-  return path.startsWith('~') ? home + path.slice(1) : path;
-}
+export const expandHome = (path: string, home: string): string => (path.startsWith('~') ? home + path.slice(1) : path);

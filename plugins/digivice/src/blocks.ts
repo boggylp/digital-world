@@ -12,16 +12,16 @@ export type Block =
   | { kind: 'flow'; dialect: 'flow' | 'mermaid'; source: string }
   | { kind: 'image'; alt: string; source: string };
 
-const FENCE = /^ {0,3}(`{3,}|~{3,})\s*([\w+#.-]*)/;
-const HEADING = /^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/;
-const IMAGE_LINE = /^\s*!\[([^\]]*)\]\(<?([^)\s>]+)>?(?:\s+"[^"]*")?\)\s*$/;
-const MERMAID_FLOWCHART = /^\s*(graph|flowchart)\b/;
+type Found = { block: Block; end: number };
 
-function isChartLanguage(language: string): language is ChartLanguage {
-  return (CHART_LANGUAGES as readonly string[]).includes(language);
-}
+const FENCE = /^ {0,3}(?<marker>`{3,}|~{3,})\s*(?<language>[\w+#.-]*)/u;
+const HEADING = /^ {0,3}(?<marks>#{1,6})\s+(?<text>.+?)(?:\s+#+)?\s*$/u;
+const IMAGE_LINE = /^\s*!\[(?<alt>[^\]]*)\]\(<?(?<source>[^)\s>]+)>?(?:\s+"[^"]*")?\)\s*$/u;
+const MERMAID_FLOWCHART = /^\s*(?:graph|flowchart)\b/u;
 
-function createFencedBlock(language: string, source: string): Block {
+const isChartLanguage = (language: string): language is ChartLanguage => (CHART_LANGUAGES as readonly string[]).includes(language);
+
+const createFencedBlock = (language: string, source: string): Block => {
   const lower = language.toLowerCase();
   if (isChartLanguage(lower)) return { kind: 'chart', language: lower, source };
   if (lower === 'flow') return { kind: 'flow', dialect: 'flow', source };
@@ -29,15 +29,29 @@ function createFencedBlock(language: string, source: string): Block {
     return { kind: 'flow', dialect: 'mermaid', source };
   }
   return { kind: 'code', language, source };
-}
+};
 
-function findFenceEnd(lines: readonly string[], start: number, fence: string): number {
-  const closing = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}\\s*$`);
+const findFenceEnd = (lines: readonly string[], start: number, fence: string): number => {
+  const closing = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}\\s*$`, 'u');
   const end = lines.findIndex((line, index) => index > start && closing.test(line));
   return end === -1 ? lines.length : end;
-}
+};
 
-export function splitBlocks(text: string): Block[] {
+const findBlock = (lines: readonly string[], index: number): Found | undefined => {
+  const line = lines[index] ?? '';
+  const fence = FENCE.exec(line)?.groups;
+  if (fence?.marker) {
+    const end = findFenceEnd(lines, index, fence.marker);
+    return { block: createFencedBlock(fence.language ?? '', lines.slice(index + 1, end).join('\n')), end };
+  }
+  const heading = HEADING.exec(line)?.groups;
+  if (heading?.marks && heading.text) return { block: { kind: 'heading', level: heading.marks.length, text: heading.text }, end: index };
+  const image = IMAGE_LINE.exec(line)?.groups;
+  if (image?.source) return { block: { kind: 'image', alt: image.alt ?? '', source: image.source }, end: index };
+  return undefined;
+};
+
+export const splitBlocks = (text: string): Block[] => {
   const lines = text.split('\n');
   const blocks: Block[] = [];
   let prose: string[] = [];
@@ -47,33 +61,17 @@ export function splitBlocks(text: string): Block[] {
     prose = [];
   };
   for (let index = 0; index < lines.length; index++) {
-    const line = lines[index] ?? '';
-    const fence = FENCE.exec(line);
-    if (fence?.[1]) {
+    const found = findBlock(lines, index);
+    if (found) {
       flushProse();
-      const end = findFenceEnd(lines, index, fence[1]);
-      blocks.push(createFencedBlock(fence[2] ?? '', lines.slice(index + 1, end).join('\n')));
-      index = end;
-      continue;
+      blocks.push(found.block);
+      index = found.end;
+    } else {
+      prose.push(lines[index] ?? '');
     }
-    const heading = HEADING.exec(line);
-    if (heading?.[1] && heading[2]) {
-      flushProse();
-      blocks.push({ kind: 'heading', level: heading[1].length, text: heading[2] });
-      continue;
-    }
-    const image = IMAGE_LINE.exec(line);
-    if (image?.[2]) {
-      flushProse();
-      blocks.push({ kind: 'image', alt: image[1] ?? '', source: image[2] });
-      continue;
-    }
-    prose.push(line);
   }
   flushProse();
   return blocks;
-}
+};
 
-export function isPlainProse(blocks: readonly Block[]): boolean {
-  return blocks.every(block => block.kind === 'markdown');
-}
+export const isPlainProse = (blocks: readonly Block[]): boolean => blocks.every(block => block.kind === 'markdown');

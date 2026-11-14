@@ -18,7 +18,7 @@ At the prompt of a Claude Code session, install either or both:
 
 ## Development
 
-The plugins are npm workspaces under `plugins/`.
+The plugins are npm workspaces under `plugins/`. Their unit tests live in `tests/<plugin>/` so the installed plugins ship without them.
 
 ```sh
 npm install

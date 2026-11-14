@@ -73,11 +73,11 @@ The full original collection remains in [assets/digimon-up/](assets/digimon-up/)
 ## Development
 
 ```sh
-npm install
-npm test                  # core unit tests (vitest)
-claude plugin test .      # mod tests against the engine
+npm install                # at the repository root
+npm test                   # at the repository root: unit tests in tests/agent-digitama
+claude plugin test .       # mod tests against the engine
 npm run typecheck
-claude --plugin-dir .     # run a session with the working copy
+claude --plugin-dir .      # a session with the working copy
 ```
 
 `npm run sprites:fetch` downloads the dot sheets into `sprites/`. `npm run sprites:build` regenerates the sprite data from the bundled dot sheets and Digimon UP collection. The build fails on missing or empty frames and incomplete mapped animation sequences.

@@ -21,6 +21,4 @@ const SERIES_COLORS: readonly string[] = [
   VIBES.mountain
 ];
 
-export function pickSeriesColor(index: number): string {
-  return SERIES_COLORS[index % SERIES_COLORS.length] ?? VIBES.sun;
-}
+export const pickSeriesColor = (index: number): string => SERIES_COLORS[index % SERIES_COLORS.length] ?? VIBES.sun;

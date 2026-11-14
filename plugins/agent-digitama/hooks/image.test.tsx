@@ -1,5 +1,5 @@
-import { expect, mock, test } from 'claude-code/testing';
-import type { Engine } from 'claude-code/testing';
+/// <reference lib="es2024.promise" />
+import { expect, mock, test, type Engine } from 'claude-code/testing';
 import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
 import { createPartner } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
@@ -14,12 +14,12 @@ import {
   encodeEgg
 } from './fixtures.tsx';
 
-async function readBandImage(engine: Engine): Promise<unknown> {
+const readBandImage = async (engine: Engine): Promise<unknown> => {
   const band = await engine.ui.mount(BAND);
   const image = await band.find({ type: 'Image', key: 'partner' });
   await band.unmount();
   return image?.props.source;
-}
+};
 
 test('band_Ghostty_RendersImagePixels', async (engine, hook) => {
   stubEngine(hook, () => 0, { TERM_PROGRAM: 'ghostty' });
@@ -71,13 +71,10 @@ test('band_DeniedImageDuringHatching_RendersTextCellBaby', async (engine, hook) 
   expect(await readBandCells(engine)).toBe(encodePartner('Botamon', 1));
 });
 
-function createGate(): { promise: Promise<void>; release: () => void } {
-  let release: () => void;
-  const promise = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  return { promise, release: () => release() };
-}
+const createGate = (): { promise: Promise<void>; release: () => void } => {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  return { promise, release: () => resolve() };
+};
 
 test('band_DeniedImageWhileRendering_KeepsTextDimensionsAndEncodingTogether', async (engine, hook) => {
   const started = createGate();
@@ -105,18 +102,18 @@ test('band_DeniedImageWhileRendering_KeepsTextDimensionsAndEncodingTogether', as
   paused.release();
   const band = await rendering;
 
-  expect((await band.find({ type: 'Raster', key: 'partner' }))?.props.cells).toBe(
-    encodeEgg('Agu_Digitama', 0)
-  );
+  const raster = await band.find({ type: 'Raster', key: 'partner' });
+
+  expect(raster?.props.cells).toBe(encodeEgg('Agu_Digitama', 0));
   await initial.unmount();
 });
 
 test('band_MountedImage_SendsDetailedAnimationUpdates', async (engine, hook) => {
   const clock = stubEngine(hook, () => 12, { TERM_PROGRAM: 'ghostty' });
   mock.store(hook);
-  let update: unknown;
+  const updates: unknown[] = [];
   hook('ui.blit', (_engine, event) => {
-    update = event;
+    updates.push(event);
     return { value: {} };
   });
   await hatchAgumon(engine, clock);
@@ -124,7 +121,7 @@ test('band_MountedImage_SendsDetailedAnimationUpdates', async (engine, hook) => 
   await clock.advance(200);
   const partner = { ...createPartner(DEFAULT_LINE), stage: 'Rookie' as const };
 
-  expect(update).toEqual({
+  expect(updates.at(-1)).toEqual({
     requestId: 'band',
     key: 'partner',
     source: {
@@ -145,5 +142,7 @@ test('band_ImageMode_FitsCompactViewport', async (engine, hook) => {
     props: { ...BAND.props, bodyColumns: 8, maxRows: 4 }
   });
 
-  expect((await band.find({ type: 'Image', key: 'partner' }))?.props.columns).toBe(8);
+  const image = await band.find({ type: 'Image', key: 'partner' });
+
+  expect(image?.props.columns).toBe(8);
 });

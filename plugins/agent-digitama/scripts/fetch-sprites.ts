@@ -15,7 +15,7 @@ const STAGE_FOLDERS = [
 
 const ENTRY = /id="entry-(?<id>[\w-]+)"[\s\S]*?flip-entry-title">(?<title>[^<]+)</gu;
 
-async function listFolder(folderId: string): Promise<[string, string][]> {
+const listFolder = async (folderId: string): Promise<[string, string][]> => {
   const response = await fetch(`https://drive.google.com/embeddedfolderview?id=${folderId}`);
   if (!response.ok) throw new Error(`Folder ${folderId}: HTTP ${response.status}`);
   const html = await response.text();
@@ -23,13 +23,13 @@ async function listFolder(folderId: string): Promise<[string, string][]> {
     match.groups?.title ?? '',
     match.groups?.id ?? ''
   ]);
-}
+};
 
-async function downloadFile(fileId: string, path: string): Promise<void> {
+const downloadFile = async (fileId: string, path: string): Promise<void> => {
   const response = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   await writeFile(path, new Uint8Array(await response.arrayBuffer()));
-}
+};
 
 const outputDirectory = process.argv[2] ?? 'sprites';
 await mkdir(outputDirectory, { recursive: true });

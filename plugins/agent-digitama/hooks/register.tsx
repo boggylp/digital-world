@@ -1,6 +1,12 @@
 import type { EngineInterface, On, Register } from 'claude-code';
 
-import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
+import {
+  BEAT_TICKS,
+  MS_PER_SECOND,
+  readPartnerPixels,
+  readStillPixels,
+  TICKS_PER_SECOND
+} from '../src/animation.ts';
 import {
   callPartner,
   createPartner,
@@ -30,8 +36,6 @@ import {
 
 const RASTER_KEY = 'partner';
 const STORE_KEY = 'partner';
-const TICK_MS = 100;
-const BEAT_TICKS = 5;
 const MEASURE_EVERY_TICKS = 20;
 const QUESTION_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 const ALERT_NOTIFICATIONS = new Set([
@@ -58,11 +62,9 @@ let isErrorLogged = false;
 let isImage = false;
 const encodedScenes = new WeakMap<Pixel[][], string>();
 
-function countBeats(): number {
-  return Math.floor(tick / BEAT_TICKS);
-}
+const countBeats = (): number => Math.floor(tick / BEAT_TICKS);
 
-function createTransition(source: Partner, target: Partner): Scene {
+const createTransition = (source: Partner, target: Partner): Scene => {
   const before = source.line.forms[source.stage];
   const after = readStillPixels(target.line.forms[target.stage], isImage);
   if (source.stage === 'Digitama') {
@@ -72,28 +74,28 @@ function createTransition(source: Partner, target: Partner): Scene {
   }
   const isRising = STAGES.indexOf(target.stage) > STAGES.indexOf(source.stage);
   return createDigivolution(readStillPixels(before, isImage), after, isRising);
-}
+};
 
-function startScene(source: Partner, target: Partner): void {
+const startScene = (source: Partner, target: Partner): void => {
   scene = createTransition(source, target);
   sceneStart = tick;
   sceneTarget = target;
-}
+};
 
-function changePartner(changed: Partner): void {
+const changePartner = (changed: Partner): void => {
   if (changed.stage !== partner.stage && scene === null) startScene(partner, changed);
   partner = changed;
-}
+};
 
-function advanceScene(): void {
+const advanceScene = (): void => {
   if (scene === null || findScenePixels(scene, tick - sceneStart) !== null) return;
   const reached = sceneTarget;
   scene = null;
   sceneTarget = null;
   if (reached !== null && reached.stage !== partner.stage) startScene(reached, partner);
-}
+};
 
-async function readImageSupport(engine: EngineInterface): Promise<boolean> {
+const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
   const [terminal, kitty, forced] = await Promise.all([
     engine.env.get('TERM_PROGRAM'),
     engine.env.get('KITTY_WINDOW_ID'),
@@ -102,48 +104,50 @@ async function readImageSupport(engine: EngineInterface): Promise<boolean> {
   return (
     forced === '1' || Boolean(kitty) || ['ghostty', 'kitty', 'iTerm.app'].includes(terminal ?? '')
   );
-}
+};
 
-function createImageSource(rgba: string) {
-  return { rgba, width: IMAGE_CANVAS.columns, height: IMAGE_CANVAS.height };
-}
+const createImageSource = (rgba: string) => ({
+  rgba,
+  width: IMAGE_CANVAS.columns,
+  height: IMAGE_CANVAS.height
+});
 
-async function readSavedLine(engine: EngineInterface): Promise<Line> {
+const readSavedLine = async (engine: EngineInterface): Promise<Line> => {
   const saved: unknown = await engine.store.get(STORE_KEY).catch(() => null);
   return (typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE;
-}
+};
 
-async function hatchSavedPartner(engine: EngineInterface): Promise<void> {
+const hatchSavedPartner = async (engine: EngineInterface): Promise<void> => {
   partner = createPartner(await readSavedLine(engine));
   scene = null;
   sceneTarget = null;
   percent = 0;
   sentCells = null;
   engine.ui.invalidate('ui.render');
-}
+};
 
-function encodeScenePixels(pixels: Pixel[][]): string {
+const encodeScenePixels = (pixels: Pixel[][]): string => {
   const cached = encodedScenes.get(pixels);
   if (cached !== undefined) return cached;
   const cells = isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
   encodedScenes.set(pixels, cells);
   return cells;
-}
+};
 
-function encodeCells(): string {
+const encodeCells = (): string => {
   const scenePixels = scene === null ? null : findScenePixels(scene, tick - sceneStart);
   if (scenePixels !== null) return encodeScenePixels(scenePixels);
   const pixels = readPartnerPixels(partner, tick, isImage);
   return isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
-}
+};
 
-async function measureContext(engine: EngineInterface): Promise<void> {
+const measureContext = async (engine: EngineInterface): Promise<void> => {
   const { context } = await engine.session.usage();
   percent = context.percent ?? percent;
   changePartner(measurePartner(partner, percent));
-}
+};
 
-async function blitFrame(engine: EngineInterface): Promise<void> {
+const blitFrame = async (engine: EngineInterface): Promise<void> => {
   if (bandId === null) return;
   const cells = encodeCells();
   if (cells === sentCells) return;
@@ -161,9 +165,9 @@ async function blitFrame(engine: EngineInterface): Promise<void> {
   bandId = null;
   sentCells = null;
   engine.ui.invalidate('ui.render');
-}
+};
 
-async function runTick(engine: EngineInterface): Promise<void> {
+const runTick = async (engine: EngineInterface): Promise<void> => {
   if (isTicking) return;
   isTicking = true;
   try {
@@ -177,10 +181,10 @@ async function runTick(engine: EngineInterface): Promise<void> {
   } finally {
     isTicking = false;
   }
-}
+};
 
-function registerLifecycleHooks(hook: On): void {
-  hook('session.start', async (engine, event, next) => {
+const registerLifecycleHooks = (hook: On): void => {
+  hook('session.start', async (engine, event, proceed) => {
     isImage = await readImageSupport(engine);
     await hatchSavedPartner(engine);
     await engine.command.register({
@@ -189,19 +193,19 @@ function registerLifecycleHooks(hook: On): void {
       argumentHint: PARTNER_LIST
     });
     ticker?.cancel();
-    ticker = engine.clock.every(TICK_MS, () => runTick(engine));
-    return next(event);
+    ticker = engine.clock.every(MS_PER_SECOND / TICKS_PER_SECOND, () => runTick(engine));
+    return proceed(event);
   });
 
-  hook('session.end', async (engine, event, next) => {
+  hook('session.end', async (engine, event, proceed) => {
     if (event.reason === 'clear') await hatchSavedPartner(engine);
-    return next(event);
+    return proceed(event);
   });
 
   hook('command.run', { command: 'agent-digitama' }, async (engine, event) => {
     const wanted = event.args.trim();
     if (wanted === '') {
-      const current = (await readSavedLine(engine)).partner;
+      const { partner: current } = await readSavedLine(engine);
       return { text: `Partner: ${current}. Choose one of: ${PARTNER_LIST}.` };
     }
     const line = findLine(wanted);
@@ -212,51 +216,51 @@ function registerLifecycleHooks(hook: On): void {
     return { text: `Saved ${line.partner}. New sessions hatch its Digitama.` };
   });
 
-  hook('prompt.submit', (engine, event, next) => {
+  hook('prompt.submit', (engine, event, proceed) => {
     changePartner(hatchPartner(partner, percent));
-    return next(event);
+    return proceed(event);
   });
-}
+};
 
-function registerReactionHooks(hook: On): void {
-  hook('tool.call', async (engine, event, next) => {
-    if (event.agentId) return next(event);
+const registerReactionHooks = (hook: On): void => {
+  hook('tool.call', async (engine, event, proceed) => {
+    if (event.agentId) return proceed(event);
     if (QUESTION_TOOLS.has(String(event.tool))) partner = callPartner(partner, true);
-    const result = await next(event);
-    const isFailure =
-      result.isError === true && !next.signal.aborted && !REFUSED.test(String(result.text ?? ''));
+    const result = await proceed(event);
+    const isRefused = REFUSED.test(String(result.text ?? ''));
+    const isFailure = result.isError === true && !proceed.signal.aborted && !isRefused;
     const answered = callPartner(partner, false);
     partner = isFailure ? reactPartner(answered, 'hurt', countBeats()) : answered;
     return result;
   });
 
-  hook('turn.complete', async (engine, event, next) => {
+  hook('turn.complete', async (engine, event, proceed) => {
     if (!event.agentId) {
       const answered = callPartner(partner, false);
       partner =
         event.reason === 'answer' ? reactPartner(answered, 'happy', countBeats()) : answered;
       await measureContext(engine);
     }
-    return next(event);
+    return proceed(event);
   });
 
-  hook('classic.PermissionRequest', async (engine, event, next) => {
-    const result = await next(event);
+  hook('classic.PermissionRequest', async (engine, event, proceed) => {
+    const result = await proceed(event);
     if (!result?.decision) partner = callPartner(partner, true);
     return result;
   });
 
-  hook('classic.Notification', (engine, event, next) => {
+  hook('classic.Notification', (engine, event, proceed) => {
     if (ALERT_NOTIFICATIONS.has(event.notification_type)) {
       partner = callPartner(partner, true);
     }
-    return next(event);
+    return proceed(event);
   });
-}
+};
 
-function registerBandHook(hook: On): void {
-  hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, next) => {
-    const theirs = await next(event);
+const registerBandHook = (hook: On): void => {
+  hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, proceed) => {
+    const theirs = await proceed(event);
     const columns = isImage ? IMAGE_COLUMNS : SPRITE_COLUMNS;
     const rows = isImage ? IMAGE_ROWS : SPRITE_ROWS;
     const isRoomy = event.props.maxRows >= rows && event.props.bodyColumns >= columns;
@@ -287,7 +291,7 @@ function registerBandHook(hook: On): void {
       </Box>
     );
   });
-}
+};
 
 export const register: Register = (hook) => {
   registerLifecycleHooks(hook);
