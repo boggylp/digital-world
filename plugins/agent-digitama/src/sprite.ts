@@ -149,3 +149,9 @@ export const encodePixels = (pixels: Pixel[][]): string => {
   const bytes = new Uint8Array(packHalfBlocks(pixels).buffer);
   return btoa(String.fromCodePoint(...bytes));
 };
+
+export const createImageSource = (rgba: string): { rgba: string; width: number; height: number } => ({
+  rgba,
+  width: IMAGE_CANVAS.columns,
+  height: IMAGE_CANVAS.height
+});

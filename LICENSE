@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This license does not cover the sprite artwork in sprites/ and
-src/sprites.generated.ts, the generated data in src/up-sprites.generated.ts
-and src/up-images/, or the upstream collection in assets/digimon-up/.
-See CREDITS.md.
+This license does not cover the agent-digitama sprite artwork or the data
+generated from it in plugins/agent-digitama: sprites/, src/sprites.generated.ts,
+src/up-sprites.generated.ts, src/up-images/ and assets/digimon-up/.
+See plugins/agent-digitama/CREDITS.md.

@@ -34,10 +34,12 @@ The form follows the session's context usage:
 | 5% | Baby II | Koromon |
 | 10% | Rookie | Agumon |
 | 30% | Champion | Greymon |
-| 55% | Ultimate | MetalGreymon |
-| 80% | Mega | WarGreymon |
+| 50% | Ultimate | MetalGreymon |
+| 70% | Mega | WarGreymon |
 
 The egg hatches on your first prompt: it wobbles, cracks and bursts into the baby. Every stage change plays a short digivolution: the old form flashes, morphs through white silhouettes and sparkles, and the new form appears. When compaction frees context, the partner de-digivolves to the stage that matches, but never below Rookie once it got there. Going down plays the same morph without sparkles.
+
+The percentages in the table are defaults. Change them in `/config` under the plugin's settings, or in `pluginConfigs` in `settings.json` with the keys `baby_ii_percent`, `rookie_percent`, `champion_percent`, `ultimate_percent` and `mega_percent`. Each value must be 1 to 100, and each stage must start higher than the one before. Otherwise the partner keeps the defaults and a notice says why on each prompt.
 
 ## Reactions
 

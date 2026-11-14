@@ -2,7 +2,51 @@
   "name": "agent-digitama",
   "version": "0.1.0",
   "description": "A Digimon partner above the prompt that hatches and digivolves as the context window fills",
-  "author": { "name": "Bogambe" },
+  "author": {
+    "name": "Bogambe"
+  },
   "license": "MIT",
-  "repository": "https://github.com/boggylp/digital-world"
+  "repository": "https://github.com/boggylp/digital-world",
+  "userConfig": {
+    "baby_ii_percent": {
+      "type": "number",
+      "title": "Baby II at (% of context)",
+      "description": "Context window percentage where the baby reaches its second form. Each stage must be higher than the one before.",
+      "default": 5,
+      "min": 1,
+      "max": 100
+    },
+    "rookie_percent": {
+      "type": "number",
+      "title": "Rookie at (% of context)",
+      "description": "Context window percentage where the partner becomes a Rookie, such as Agumon. Each stage must be higher than the one before.",
+      "default": 10,
+      "min": 1,
+      "max": 100
+    },
+    "champion_percent": {
+      "type": "number",
+      "title": "Champion at (% of context)",
+      "description": "Context window percentage where the partner becomes a Champion. Each stage must be higher than the one before.",
+      "default": 30,
+      "min": 1,
+      "max": 100
+    },
+    "ultimate_percent": {
+      "type": "number",
+      "title": "Ultimate at (% of context)",
+      "description": "Context window percentage where the partner becomes an Ultimate. Each stage must be higher than the one before.",
+      "default": 50,
+      "min": 1,
+      "max": 100
+    },
+    "mega_percent": {
+      "type": "number",
+      "title": "Mega at (% of context)",
+      "description": "Context window percentage where the partner reaches Mega. Each stage must be higher than the one before.",
+      "default": 70,
+      "min": 1,
+      "max": 100
+    }
+  }
 }

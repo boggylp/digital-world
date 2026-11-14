@@ -10,16 +10,19 @@ import {
 import {
   callPartner,
   createPartner,
+  DEFAULT_THRESHOLDS,
   hatchPartner,
   measurePartner,
   reactPartner,
-  type Partner
+  readThresholds,
+  type Partner,
+  type Thresholds
 } from '../src/partner.ts';
 import { DEFAULT_LINE, findLine, LINES, STAGES, type Line } from '../src/roster.ts';
 import {
+  createImageSource,
   encodeImagePixels,
   encodePixels,
-  IMAGE_CANVAS,
   IMAGE_COLUMNS,
   IMAGE_ROWS,
   SPRITE_COLUMNS,
@@ -60,6 +63,7 @@ let sceneTarget: Partner | null = null;
 let isTicking = false;
 let isErrorLogged = false;
 let isImage = false;
+let thresholds: Thresholds | null = DEFAULT_THRESHOLDS;
 const encodedScenes = new WeakMap<Pixel[][], string>();
 
 const countBeats = (): number => Math.floor(tick / BEAT_TICKS);
@@ -106,12 +110,6 @@ const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
   );
 };
 
-const createImageSource = (rgba: string) => ({
-  rgba,
-  width: IMAGE_CANVAS.columns,
-  height: IMAGE_CANVAS.height
-});
-
 const readSavedLine = async (engine: EngineInterface): Promise<Line> => {
   const saved: unknown = await engine.store.get(STORE_KEY).catch(() => null);
   return (typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE;
@@ -144,7 +142,7 @@ const encodeCells = (): string => {
 const measureContext = async (engine: EngineInterface): Promise<void> => {
   const { context } = await engine.session.usage();
   percent = context.percent ?? percent;
-  changePartner(measurePartner(partner, percent));
+  changePartner(measurePartner(partner, percent, thresholds ?? DEFAULT_THRESHOLDS));
 };
 
 const blitFrame = async (engine: EngineInterface): Promise<void> => {
@@ -217,7 +215,8 @@ const registerLifecycleHooks = (hook: On): void => {
   });
 
   hook('prompt.submit', (engine, event, proceed) => {
-    changePartner(hatchPartner(partner, percent));
+    if (thresholds === null) engine.ui.toast('agent-digitama: stage percentages must be 1 to 100 and rise from Baby II to Mega, so the defaults apply.');
+    changePartner(hatchPartner(partner, percent, thresholds ?? DEFAULT_THRESHOLDS));
     return proceed(event);
   });
 };
@@ -293,7 +292,8 @@ const registerBandHook = (hook: On): void => {
   });
 };
 
-export const register: Register = (hook) => {
+export const register: Register = (hook, options) => {
+  thresholds = readThresholds(options);
   registerLifecycleHooks(hook);
   registerReactionHooks(hook);
   registerBandHook(hook);

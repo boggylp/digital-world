@@ -174,3 +174,19 @@ test('band_CompactionFromChampion_SettlesOnAgumon', async (engine, hook) => {
 
   expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 120));
 });
+
+test('band_ChampionSetTo50_StaysAgumonAt40', { options: { champion_percent: 50, ultimate_percent: 60, mega_percent: 80 } }, async (engine, hook) => {
+  const clock = stubEngine(hook, () => 40);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
+
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
+});
+
+test('band_MegaBelowUltimate_UsesDefaultStages', { options: { champion_percent: 45, ultimate_percent: 60, mega_percent: 20 } }, async (engine, hook) => {
+  const clock = stubEngine(hook, () => 40);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
+
+  expect(await readBandCells(engine)).toBe(encodeUpFrame('Greymon', 6));
+});

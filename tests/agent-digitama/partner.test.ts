@@ -1,12 +1,14 @@
-
+import { readFile } from 'node:fs/promises';
 
 import {
   callPartner,
   createPartner,
+  DEFAULT_THRESHOLDS,
   hatchPartner,
   measurePartner,
   nameForm,
   reactPartner,
+  readThresholds,
   selectFrame,
   type Partner
 } from '../../plugins/agent-digitama/src/partner.ts';
@@ -26,40 +28,69 @@ describe('measurePartner', () => {
     [10, 'Rookie'],
     [29.9, 'Rookie'],
     [30, 'Champion'],
-    [54.9, 'Champion'],
-    [55, 'Ultimate'],
-    [79.9, 'Ultimate'],
-    [80, 'Mega'],
+    [49.9, 'Champion'],
+    [50, 'Ultimate'],
+    [69.9, 'Ultimate'],
+    [70, 'Mega'],
     [100, 'Mega']
   ] as const)('measurePartner_BabyAt%s_Becomes%s', (percent, stage) => {
-    expect(measurePartner(createAgumon('Baby I'), percent).stage).toBe(stage);
+    expect(measurePartner(createAgumon('Baby I'), percent, DEFAULT_THRESHOLDS).stage).toBe(stage);
   });
 
   it('measurePartner_EggBeforeFirstPrompt_StaysEgg', () => {
-    expect(measurePartner(createAgumon(), 60).stage).toBe('Digitama');
+    expect(measurePartner(createAgumon(), 60, DEFAULT_THRESHOLDS).stage).toBe('Digitama');
   });
 
   it('measurePartner_MegaAfterCompactionTo20_DeDigivolvesToRookie', () => {
-    expect(measurePartner(createAgumon('Mega'), 20).stage).toBe('Rookie');
+    expect(measurePartner(createAgumon('Mega'), 20, DEFAULT_THRESHOLDS).stage).toBe('Rookie');
   });
 
   it('measurePartner_MegaAfterCompactionTo40_DeDigivolvesToChampion', () => {
-    expect(measurePartner(createAgumon('Mega'), 40).stage).toBe('Champion');
+    expect(measurePartner(createAgumon('Mega'), 40, DEFAULT_THRESHOLDS).stage).toBe('Champion');
   });
 
   it('measurePartner_RookieAtZero_KeepsRookieFloor', () => {
-    expect(measurePartner(createAgumon('Rookie'), 0).stage).toBe('Rookie');
+    expect(measurePartner(createAgumon('Rookie'), 0, DEFAULT_THRESHOLDS).stage).toBe('Rookie');
+  });
+});
+
+describe('readThresholds', () => {
+  it('readThresholds_NoOptions_ReturnsDefaults', () => {
+    expect(readThresholds({})).toStrictEqual({ babyII: 5, rookie: 10, champion: 30, ultimate: 50, mega: 70 });
+  });
+
+  it('readThresholds_CustomRisingPercentages_ReturnsThem', () => {
+    const options = { baby_ii_percent: 2, rookie_percent: 4, champion_percent: 20, ultimate_percent: 40, mega_percent: 60 };
+    expect(readThresholds(options)).toStrictEqual({ babyII: 2, rookie: 4, champion: 20, ultimate: 40, mega: 60 });
+  });
+
+  it('readThresholds_ManifestDefaults_MatchCodeDefaults', async () => {
+    const manifest = JSON.parse(await readFile(new URL('../../plugins/agent-digitama/.claude-plugin/plugin.json', import.meta.url), 'utf8')) as { userConfig: Record<string, { default: number }> };
+    const defaults = Object.fromEntries(Object.entries(manifest.userConfig).map(([key, field]) => [key, field.default]));
+    expect(readThresholds(defaults)).toStrictEqual(DEFAULT_THRESHOLDS);
+  });
+
+  it.each([
+    ['MegaBelowUltimate', { ultimate_percent: 60, mega_percent: 40 }],
+    ['MegaEqualsUltimate', { ultimate_percent: 60, mega_percent: 60 }],
+    ['RookieAboveChampion', { rookie_percent: 40, champion_percent: 35 }],
+    ['MegaOver100', { mega_percent: 150 }],
+    ['BabyIIAtZero', { baby_ii_percent: 0 }],
+    ['NotANumber', { mega_percent: Number.NaN }],
+    ['TextPercent', { mega_percent: '70' }]
+  ] as const)('readThresholds_%s_ReturnsNull', (_scenario, options) => {
+    expect(readThresholds(options)).toBeNull();
   });
 });
 
 describe('hatchPartner', () => {
   it('hatchPartner_EggOnFirstPrompt_HatchesToBabyI', () => {
-    expect(hatchPartner(createAgumon(), 2).stage).toBe('Baby I');
+    expect(hatchPartner(createAgumon(), 2, DEFAULT_THRESHOLDS).stage).toBe('Baby I');
   });
 
   it('hatchPartner_CallingPartner_StopsCalling', () => {
     const calling = callPartner(createAgumon('Rookie'), true);
-    expect(hatchPartner(calling, 12).isCalling).toBe(false);
+    expect(hatchPartner(calling, 12, DEFAULT_THRESHOLDS).isCalling).toBe(false);
   });
 });
 

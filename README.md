@@ -26,6 +26,16 @@ npm test
 npm run typecheck
 ```
 
+## Releases
+
+Each plugin has its own version, set only in its `.claude-plugin/plugin.json`. Claude Code updates an installed plugin only when that string changes.
+
+To release a plugin:
+
+1. Raise `version` in its `plugin.json`: patch for fixes, minor for new features, major for breaking changes.
+2. Add the release to its `CHANGELOG.md`.
+3. Land the change on `main`, then run `claude plugin tag --push` in the plugin folder. It creates a `<plugin>--v<version>` tag.
+
 ## License
 
 The code is [MIT](LICENSE). It does not cover the sprites or the Digimon characters, whose owners [CREDITS.md](plugins/agent-digitama/CREDITS.md) names.
