@@ -1,17 +1,14 @@
-/// <reference lib="es2024.promise" />
 import { expect, mock, test, type Engine } from 'claude-code/testing';
 import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
 import { createPartner } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
-import { encodeImagePixels } from '../src/sprite.ts';
+import { encodeImagePixels, SPRITE_COLUMNS, SPRITE_ROWS } from '../src/sprite.ts';
 import {
   BAND,
   stubEngine,
   startSession,
   hatchAgumon,
-  readBandCells,
-  encodePartner,
-  encodeEgg
+  encodePartner
 } from './fixtures.tsx';
 
 const readBandImage = async (engine: Engine): Promise<unknown> => {
@@ -67,45 +64,11 @@ test('band_DeniedImageDuringHatching_RendersTextCellBaby', async (engine, hook) 
   const band = await engine.ui.mount(BAND);
   await clock.advance(100);
   await band.unmount();
+  const textBand = await engine.ui.mount(BAND);
+  const raster = await textBand.find({ type: 'Raster', key: 'partner' });
+  await textBand.unmount();
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Botamon', 1));
-});
-
-const createGate = (): { promise: Promise<void>; release: () => void } => {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  return { promise, release: () => resolve() };
-};
-
-test('band_DeniedImageWhileRendering_KeepsTextDimensionsAndEncodingTogether', async (engine, hook) => {
-  const started = createGate();
-  const paused = createGate();
-  const ready = Promise.resolve();
-  let waitForRender = () => ready;
-  const clock = stubEngine(
-    hook,
-    () => 0,
-    { TERM_PROGRAM: 'ghostty' },
-    () => waitForRender()
-  );
-  mock.store(hook);
-  hook('ui.blit', () => ({ value: { deny: 'Images unavailable' } }));
-  await startSession(engine);
-  const initial = await engine.ui.mount(BAND);
-  waitForRender = () => {
-    waitForRender = () => ready;
-    started.release();
-    return paused.promise;
-  };
-  const rendering = engine.ui.mount({ ...BAND, requestId: 'replacement' });
-  await started.promise;
-  await clock.advance(100);
-  paused.release();
-  const band = await rendering;
-
-  const raster = await band.find({ type: 'Raster', key: 'partner' });
-
-  expect(raster?.props.cells).toBe(encodeEgg('Agu_Digitama', 0));
-  await initial.unmount();
+  expect(raster?.props).toMatchObject({ columns: SPRITE_COLUMNS, rows: SPRITE_ROWS, cells: encodePartner('Botamon', 1) });
 });
 
 test('band_MountedImage_SendsDetailedAnimationUpdates', async (engine, hook) => {

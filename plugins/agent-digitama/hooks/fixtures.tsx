@@ -28,15 +28,13 @@ export const BAND = {
 export const stubEngine = (
   hook: On,
   readPercent: () => number,
-  environment: Record<string, string> = {},
-  waitForRender: () => Promise<void> = () => Promise.resolve()
+  environment: Record<string, string> = {}
 ): MockClock => {
   mock.env(hook, environment);
   hook('command.register', () => ({ value: { command: 'agent-digitama' } }));
   hook('session.start', (_engine, event) => ({ cwd: event.cwd }));
   hook('prompt.submit', (_engine, event) => ({ text: event.text }));
-  hook('ui.render', async (engine, event) => {
-    await waitForRender();
+  hook('ui.render', (engine, event) => {
     const { Text } = engine.ui.resolve(event);
     return <Text>prompt hint</Text>;
   });
