@@ -4,7 +4,7 @@ A pixel Digimon partner that lives above the prompt in Claude Code. Every sessio
 
 ## Install
 
-At the prompt of a Claude Code terminal session:
+At the prompt of a Claude Code session:
 
 ```text
 /plugin install agent-digitama --marketplace boggylp/digital-world
@@ -12,16 +12,16 @@ At the prompt of a Claude Code terminal session:
 
 Answer `y` to add the marketplace, then pick a scope. The partner appears in the band above the prompt.
 
-Requirements: Claude Code with mods (tested on 2.1.316) and a truecolor terminal. The partner appears only in terminal sessions.
+Requirements: Claude Code with mods (tested on 2.1.326), in a truecolor terminal or the desktop app. The desktop app draws the partner as vector pixel art.
 
-Ghostty, kitty and compatible iTerm2 sessions use image rendering. Other terminals use text cells. If Claude refuses image updates, the partner falls back to text cells for that session.
+The desktop app always uses the detailed sprites, 64 pixels tall. In the terminal, Ghostty, kitty and compatible iTerm2 sessions use image rendering, and other terminals use text cells. If Claude refuses image updates, the partner falls back to text cells for that session.
 
 | Renderer | Minimum band width | Minimum band height |
 | --- | --- | --- |
 | Image | 8 columns | 4 rows |
 | Text cells | 24 columns | 8 rows |
 
-The partner hides when the band cannot fit its renderer. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
+In the terminal, the partner hides when the band cannot fit its renderer. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
 
 ## How the partner grows
 
@@ -59,11 +59,11 @@ New sessions hatch the saved partner's egg. The current session keeps its partne
 
 ## Sprites
 
-[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for the Agumon, Gabumon and Palmon lines, plus Biyomon from Rookie onward. The image renderer preserves the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
+[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for the Agumon, Gabumon and Palmon lines, plus Biyomon from Rookie onward. The image renderer and the desktop app preserve the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
 
 | Renderer | Pixel canvas |
 | --- | --- |
-| Image | 80×80 |
+| Image and desktop | 80×80 |
 | Text cells | 24×16 |
 
 Eggs, Biyomon's early forms, Salamon and Veemon use Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/) with their original artwork, scaled evenly for image rendering. Both sets are bundled for offline use. See [CREDITS.md](CREDITS.md).

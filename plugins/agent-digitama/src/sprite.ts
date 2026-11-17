@@ -37,6 +37,8 @@ export const RGBA_CHANNELS = 4;
 const RED_SHIFT = 16;
 const GREEN_SHIFT = 8;
 const OPAQUE_ALPHA = 255;
+const HEX_RADIX = 16;
+const HEX_DIGITS = 6;
 export const CENTERING_DIVISOR = 2;
 export const TRANSPARENT = '.';
 export const PIXEL_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -148,6 +150,36 @@ export const packHalfBlocks = (pixels: Pixel[][]): Uint32Array => {
 export const encodePixels = (pixels: Pixel[][]): string => {
   const bytes = new Uint8Array(packHalfBlocks(pixels).buffer);
   return btoa(String.fromCodePoint(...bytes));
+};
+
+const formatHexColor = (pixel: number): string => `#${pixel.toString(HEX_RADIX).padStart(HEX_DIGITS, '0')}`;
+
+const readRunLength = (row: readonly Pixel[], left: number): number => {
+  let end = left + 1;
+  while (end < row.length && row[end] === row[left]) end += 1;
+  return end - left;
+};
+
+const traceRuns = (pixels: Pixel[][]): Map<number, string[]> => {
+  const runs = new Map<number, string[]>();
+  pixels.forEach((row, top) => {
+    row.forEach((pixel, left) => {
+      if (pixel === null || row[left - 1] === pixel) return;
+      const length = readRunLength(row, left);
+      const colorRuns = runs.get(pixel) ?? [];
+      colorRuns.push(`M${left} ${top}h${length}v1h-${length}z`);
+      runs.set(pixel, colorRuns);
+    });
+  });
+  return runs;
+};
+
+export const encodeSvgPixels = (pixels: Pixel[][]): string => {
+  const paths = [...traceRuns(pixels)].map(
+    ([pixel, runs]) => `<path fill="${formatHexColor(pixel)}" d="${runs.join('')}"/>`
+  );
+  const columns = pixels[0]?.length ?? 0;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${columns} ${pixels.length}" shape-rendering="crispEdges">${paths.join('')}</svg>`;
 };
 
 export const createImageSource = (rgba: string): { rgba: string; width: number; height: number } => ({

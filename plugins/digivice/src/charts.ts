@@ -41,11 +41,11 @@ const PIE_COLUMNS = PIE_DIAMETER / BRAILLE_DOT_COLUMNS;
 const MIDPOINT_FRACTION = 0.5;
 const DOT_CENTER_OFFSET = 0.5;
 const PIE_RADIUS = PIE_DIAMETER * MIDPOINT_FRACTION;
-const FULL_TURN = Math.PI + Math.PI;
-const PERCENT = 100;
+export const FULL_TURN = Math.PI + Math.PI;
+export const PERCENT = 100;
 const WHOLE_NUMBER_THRESHOLD = 100;
 const DECIMAL_SCALE = 100;
-const MAX_LABEL_WIDTH = 16;
+export const MAX_LABEL_WIDTH = 16;
 const MIN_BAR_WIDTH = 4;
 const BAR_GAPS = 3;
 const MAX_SLOT_WIDTH = 8;
@@ -94,9 +94,14 @@ export const formatNumber = (value: number, unit = ''): string => {
   return `${rounded.toLocaleString('en-US')}${unit}`;
 };
 
-const fit = (text: string, width: number): string => (text.length > width ? `${text.slice(0, Math.max(0, width - 1))}…` : text.padEnd(width));
+export const shorten = (text: string, width: number): string => {
+  const characters = [...text];
+  return characters.length > width ? `${characters.slice(0, Math.max(0, width - 1)).join('')}…` : text;
+};
 
-const readCategories = (chart: Chart): { label: string; value: number }[] =>
+const fit = (text: string, width: number): string => shorten(text, width).padEnd(width);
+
+export const readCategories = (chart: Chart): { label: string; value: number }[] =>
   chart.series.map(series => ({ label: series.name, value: series.values[0] ?? 0 }));
 
 const renderHorizontalBars = (chart: Chart, columns: number): Line[] => {
@@ -264,6 +269,9 @@ const renderPie = (chart: Chart): Line[] => {
     return [...disc, ...(legend[row] ?? [])];
   });
 };
+
+export const describeChart = (chart: Chart): string =>
+  `${chart.title ?? chart.type} chart: ${chart.series.map(series => `${series.name} ${series.values.map(value => formatNumber(value, chart.unit)).join(', ')}`).join('; ')}`;
 
 export const renderChart = (chart: Chart, columns: number): Line[] => {
   const body = {

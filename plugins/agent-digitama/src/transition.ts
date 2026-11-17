@@ -1,4 +1,8 @@
+import { readStillPixels } from './animation.ts';
+import type { Partner } from './partner.ts';
+import { STAGES } from './roster.ts';
 import { placeDotPixels, FRAMES, readPixels, type Pixel, type Sheet } from './sprite.ts';
+import { SHEETS } from './sprites.generated.ts';
 
 export type Scene = { pixels: Pixel[][]; ticks: number }[];
 
@@ -110,4 +114,16 @@ export const findScenePixels = (scene: Scene, tick: number): Pixel[][] | null =>
     if (tick < elapsed) return step.pixels;
   }
   return null;
+};
+
+export const createTransition = (source: Partner, target: Partner, isImage: boolean): Scene => {
+  const before = source.line.forms[source.stage];
+  const after = readStillPixels(target.line.forms[target.stage], isImage);
+  if (source.stage === 'Digitama') {
+    const egg = SHEETS[before];
+    if (egg === undefined) throw new Error(`No egg sprite for ${before}`);
+    return createHatching(egg, after);
+  }
+  const isRising = STAGES.indexOf(target.stage) > STAGES.indexOf(source.stage);
+  return createDigivolution(readStillPixels(before, isImage), after, isRising);
 };

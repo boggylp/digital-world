@@ -5,6 +5,7 @@ import {
   DEFAULT_COLOR,
   FRAMES,
   encodeImagePixels,
+  encodeSvgPixels,
   packAnimations,
   packHalfBlocks,
   readAnimationPixels,
@@ -100,4 +101,16 @@ describe('sHEETS', () => {
       expect(listBlankFrames(name, REQUIRED_FRAMES)).toStrictEqual([]);
     }
   );
+
+  it('encodeSvgPixels_RunsAndGaps_MergesEachColorIntoOnePath', () => {
+    const svg = encodeSvgPixels([
+      [RED, RED, null, RED],
+      [BLUE, null, null, null]
+    ]);
+
+    expect(svg).toBe(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 2" shape-rendering="crispEdges">' +
+        '<path fill="#ff0000" d="M0 0h2v1h-2zM3 0h1v1h-1z"/><path fill="#0000ff" d="M0 1h1v1h-1z"/></svg>'
+    );
+  });
 });

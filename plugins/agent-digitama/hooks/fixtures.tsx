@@ -3,7 +3,13 @@ import { mock, type Engine, type MockClock } from 'claude-code/testing';
 import { readPartnerPixels } from '../src/animation.ts';
 import { createPartner, type Reaction } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
-import { encodePixels, placeDotPixels, readAnimationPixels, readPixels } from '../src/sprite.ts';
+import {
+  encodePixels,
+  placeDotPixels,
+  readAnimationPixels,
+  readPixels,
+  type Pixel
+} from '../src/sprite.ts';
 import { SHEETS } from '../src/sprites.generated.ts';
 import { UP_SPRITES } from '../src/up-sprites.generated.ts';
 
@@ -44,8 +50,11 @@ export const stubEngine = (
   return mock.clock(hook);
 };
 
-export const startSession = async (engine: Engine): Promise<void> => {
-  await engine.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
+export const startSession = async (
+  engine: Engine,
+  surface: 'terminal' | 'desktop' = 'terminal'
+): Promise<void> => {
+  await engine.session.start({ cwd: '/', surface, isInteractive: true });
 };
 
 export const runCommand = async (engine: Engine, args: string): Promise<string | undefined> => {
@@ -58,11 +67,12 @@ export const runCommand = async (engine: Engine, args: string): Promise<string |
   return result.text;
 };
 
-export const encodePartner = (
+export const readPartnerFrame = (
   form: string,
   tick: number,
-  reaction: Reaction | null = null
-): string => {
+  reaction: Reaction | null = null,
+  isImage = false
+): Pixel[][] => {
   const partner = {
     ...createPartner(DEFAULT_LINE),
     line: { ...DEFAULT_LINE, forms: { ...DEFAULT_LINE.forms, Rookie: form } },
@@ -70,8 +80,14 @@ export const encodePartner = (
     reaction,
     reactionUntilTick: reaction === null ? 0 : UNEXPIRED_REACTION_TICK
   };
-  return encodePixels(readPartnerPixels(partner, tick));
+  return readPartnerPixels(partner, tick, isImage);
 };
+
+export const encodePartner = (
+  form: string,
+  tick: number,
+  reaction: Reaction | null = null
+): string => encodePixels(readPartnerFrame(form, tick, reaction));
 
 export const encodeUpFrame = (form: string, index: number): string => {
   const animation = UP_SPRITES[form];
@@ -90,8 +106,12 @@ export const encodeEgg = (form: string, frame: number): string => {
 
 export const AFTER_SCENES_MS = 6000;
 
-export const hatchAgumon = async (engine: Engine, clock: MockClock): Promise<void> => {
-  await startSession(engine);
+export const hatchAgumon = async (
+  engine: Engine,
+  clock: MockClock,
+  surface: 'terminal' | 'desktop' = 'terminal'
+): Promise<void> => {
+  await startSession(engine, surface);
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   await clock.advance(AFTER_SCENES_MS);
 };
@@ -101,4 +121,13 @@ export const readBandCells = async (engine: Engine): Promise<unknown> => {
   const raster = await band.find({ type: 'Raster', key: 'partner' });
   await band.unmount();
   return raster?.props.cells;
+};
+
+export const DESKTOP_BAND = { ...BAND, surface: 'desktop' } as const;
+
+export const readBandSvg = async (engine: Engine): Promise<unknown> => {
+  const band = await engine.ui.mount(DESKTOP_BAND);
+  const svg = await band.find({ type: 'Svg' });
+  await band.unmount();
+  return svg?.props.source;
 };

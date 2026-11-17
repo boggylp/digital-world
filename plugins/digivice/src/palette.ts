@@ -7,7 +7,8 @@ export const VIBES = {
   lavender: '#b8a2ee',
   blossom: '#f59ac4',
   mountain: '#7d9cc4',
-  dusk: '#8a93b8'
+  dusk: '#8a93b8',
+  slate: '#76829c'
 } as const;
 
 const SERIES_COLORS: readonly string[] = [

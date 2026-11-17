@@ -1,6 +1,6 @@
 export const DEMO_TEXT = `# Digital World tour
 
-Fenced blocks draw as pictures in the terminal. Paths like {root}/README.md and links like https://github.com open on click.
+Fenced blocks draw as pictures. Paths like {root}/README.md and links like https://github.com open on click.
 
 ## Bar chart
 

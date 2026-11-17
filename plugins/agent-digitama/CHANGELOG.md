@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The partner in the Claude Code desktop app, drawn as vector pixel art above the prompt.
+
 ## [0.1.0] - 2026-11-14
 
 ### Added

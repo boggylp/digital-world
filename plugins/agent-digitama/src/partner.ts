@@ -1,6 +1,16 @@
 import { STAGES, type Line, type Stage } from './roster.ts';
 import { FRAMES } from './sprite.ts';
 
+export const QUESTION_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
+export const ALERT_NOTIFICATIONS = new Set([
+  'permission_prompt',
+  'worker_permission_prompt',
+  'agent_needs_input',
+  'elicitation_dialog'
+]);
+export const REFUSED =
+  /The user doesn't want to (?:proceed with this tool use|take this action)|\[Request interrupted by user/u;
+
 export type Thresholds = {
   babyII: number;
   rookie: number;

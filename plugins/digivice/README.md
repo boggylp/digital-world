@@ -1,6 +1,6 @@
 # digivice
 
-A Digital World look for Claude Code. In the terminal, headings, code, charts, flow graphs and images in replies get summer-sky colors, while plain prose keeps your terminal theme.
+A Digital World look for Claude Code. In the terminal and the desktop app, headings, code, charts, flow graphs and images in replies get summer-sky colors, while plain prose keeps your theme.
 
 ## Install
 
@@ -14,7 +14,7 @@ Run `/digivice` for a tour of everything it draws.
 
 ## What it draws
 
-| Claude writes | The terminal shows |
+| Claude writes | Claude Code shows |
 | --- | --- |
 | A ` ```bar `, ` ```hbar `, ` ```line `, ` ```spark ` or ` ```pie ` block | A chart in the sky, sun and leaf colors |
 | A ` ```chart ` block with a `type:` line | The same chart, picked by `type` |
@@ -41,11 +41,13 @@ output: 4, 6, 9, 7
 ```
 ````
 
+The desktop app draws charts as vector graphics 560 pixels wide, shortening long labels to fit. The terminal draws them with block and braille characters.
+
 `bar`, `hbar` and `pie` read the first value of each line as one category. `line` and `spark` read every value as a series. A block that does not parse draws as code with the reason under it.
 
 ## Images
 
-Images draw in Ghostty, kitty, WezTerm and iTerm2 outside tmux. Set [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1`](https://code.claude.com/docs/en/plugins/mods/gallery.md) when your terminal path draws images but is not detected. Elsewhere, and for remote or non-PNG images, the mod draws a clickable link.
+The desktop app draws local PNGs up to about 95 KB and links larger ones. In the terminal, images draw in Ghostty, kitty, WezTerm and iTerm2 outside tmux. Set [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1`](https://code.claude.com/docs/en/plugins/mods/gallery.md) when your terminal path draws images but is not detected. Elsewhere, and for remote or non-PNG images, the mod draws a clickable link.
 
 ## Development
 

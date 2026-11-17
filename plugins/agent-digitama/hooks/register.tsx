@@ -1,13 +1,13 @@
-import type { EngineInterface, On, Register } from 'claude-code';
+import type { EngineInterface, MatchedHook, On, Register, RenderElement } from 'claude-code';
 
 import {
   BEAT_TICKS,
   MS_PER_SECOND,
   readPartnerPixels,
-  readStillPixels,
   TICKS_PER_SECOND
 } from '../src/animation.ts';
 import {
+  ALERT_NOTIFICATIONS,
   callPartner,
   createPartner,
   DEFAULT_THRESHOLDS,
@@ -15,40 +15,34 @@ import {
   measurePartner,
   reactPartner,
   readThresholds,
+  QUESTION_TOOLS,
+  REFUSED,
   type Partner,
   type Thresholds
 } from '../src/partner.ts';
-import { DEFAULT_LINE, findLine, LINES, STAGES, type Line } from '../src/roster.ts';
+import { DEFAULT_LINE, findLine, LINES, type Line } from '../src/roster.ts';
 import {
   createImageSource,
   encodeImagePixels,
   encodePixels,
-  IMAGE_COLUMNS,
-  IMAGE_ROWS,
-  SPRITE_COLUMNS,
-  SPRITE_ROWS,
+  encodeSvgPixels,
   type Pixel
 } from '../src/sprite.ts';
-import { SHEETS } from '../src/sprites.generated.ts';
 import {
-  createDigivolution,
-  createHatching,
+  drawCellCorner,
+  drawSvgCorner,
+  fitsCellCorner,
+  placeCorner,
+  RASTER_KEY
+} from './corner.tsx';
+import {
+  createTransition,
   findScenePixels,
   type Scene
 } from '../src/transition.ts';
 
-const RASTER_KEY = 'partner';
 const STORE_KEY = 'partner';
 const MEASURE_EVERY_TICKS = 20;
-const QUESTION_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
-const ALERT_NOTIFICATIONS = new Set([
-  'permission_prompt',
-  'worker_permission_prompt',
-  'agent_needs_input',
-  'elicitation_dialog'
-]);
-const REFUSED =
-  /The user doesn't want to (?:proceed with this tool use|take this action)|\[Request interrupted by user/u;
 const PARTNER_LIST = LINES.map((line) => line.partner).join(', ');
 
 let partner: Partner = createPartner(DEFAULT_LINE);
@@ -56,6 +50,7 @@ let tick = 0;
 let percent = 0;
 let bandId: string | null = null;
 let sentCells: string | null = null;
+let sentSvg: string | null = null;
 let ticker: { cancel: () => void } | null = null;
 let scene: Scene | null = null;
 let sceneStart = 0;
@@ -68,20 +63,8 @@ const encodedScenes = new WeakMap<Pixel[][], string>();
 
 const countBeats = (): number => Math.floor(tick / BEAT_TICKS);
 
-const createTransition = (source: Partner, target: Partner): Scene => {
-  const before = source.line.forms[source.stage];
-  const after = readStillPixels(target.line.forms[target.stage], isImage);
-  if (source.stage === 'Digitama') {
-    const egg = SHEETS[before];
-    if (egg === undefined) throw new Error(`No egg sprite for ${before}`);
-    return createHatching(egg, after);
-  }
-  const isRising = STAGES.indexOf(target.stage) > STAGES.indexOf(source.stage);
-  return createDigivolution(readStillPixels(before, isImage), after, isRising);
-};
-
 const startScene = (source: Partner, target: Partner): void => {
-  scene = createTransition(source, target);
+  scene = createTransition(source, target, isImage);
   sceneStart = tick;
   sceneTarget = target;
 };
@@ -132,8 +115,13 @@ const encodeScenePixels = (pixels: Pixel[][]): string => {
   return cells;
 };
 
+const readScenePixels = (): Pixel[][] | null =>
+  scene === null ? null : findScenePixels(scene, tick - sceneStart);
+
+const readFramePixels = (): Pixel[][] => readScenePixels() ?? readPartnerPixels(partner, tick, isImage);
+
 const encodeCells = (): string => {
-  const scenePixels = scene === null ? null : findScenePixels(scene, tick - sceneStart);
+  const scenePixels = readScenePixels();
   if (scenePixels !== null) return encodeScenePixels(scenePixels);
   const pixels = readPartnerPixels(partner, tick, isImage);
   return isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
@@ -165,6 +153,11 @@ const blitFrame = async (engine: EngineInterface): Promise<void> => {
   engine.ui.invalidate('ui.render');
 };
 
+const redrawSvg = (engine: EngineInterface): void => {
+  if (sentSvg === null || encodeSvgPixels(readFramePixels()) === sentSvg) return;
+  engine.ui.invalidate('ui.render');
+};
+
 const runTick = async (engine: EngineInterface): Promise<void> => {
   if (isTicking) return;
   isTicking = true;
@@ -173,6 +166,7 @@ const runTick = async (engine: EngineInterface): Promise<void> => {
     if (tick % MEASURE_EVERY_TICKS === 0) await measureContext(engine);
     advanceScene();
     await blitFrame(engine);
+    redrawSvg(engine);
   } catch (error) {
     if (!isErrorLogged) engine.ui.log(`agent-digitama: ${String(error)}`);
     isErrorLogged = true;
@@ -183,7 +177,7 @@ const runTick = async (engine: EngineInterface): Promise<void> => {
 
 const registerLifecycleHooks = (hook: On): void => {
   hook('session.start', async (engine, event, proceed) => {
-    isImage = await readImageSupport(engine);
+    isImage = event.surface !== 'terminal' || (await readImageSupport(engine));
     await hatchSavedPartner(engine);
     await engine.command.register({
       name: 'agent-digitama',
@@ -257,38 +251,41 @@ const registerReactionHooks = (hook: On): void => {
   });
 };
 
+type BandEvent = Parameters<MatchedHook<'ui.render', { component: 'AbovePrompt' }>>[1];
+
+const readForm = (): string => partner.line.forms[partner.stage];
+
+const drawTerminalCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {
+  sentSvg = null;
+  if (event.surface !== 'terminal' || event.props.hasSurvey || !fitsCellCorner(isImage, event.props)) {
+    bandId = null;
+    return null;
+  }
+  bandId = event.requestId;
+  const cells = encodeCells();
+  sentCells = isImage ? null : cells;
+  return drawCellCorner(engine.ui.resolve(event), { cells, isImage, alt: readForm() });
+};
+
+const drawDesktopCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {
+  bandId = null;
+  if (event.surface !== 'desktop' || event.props.hasSurvey || event.props.isCollapsed) {
+    sentSvg = null;
+    return null;
+  }
+  const pixels = readFramePixels();
+  sentSvg = encodeSvgPixels(pixels);
+  return drawSvgCorner(engine.ui.resolve(event), { pixels, source: sentSvg, alt: readForm() });
+};
+
 const registerBandHook = (hook: On): void => {
   hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, proceed) => {
     const theirs = await proceed(event);
-    const columns = isImage ? IMAGE_COLUMNS : SPRITE_COLUMNS;
-    const rows = isImage ? IMAGE_ROWS : SPRITE_ROWS;
-    const isRoomy = event.props.maxRows >= rows && event.props.bodyColumns >= columns;
-    if (event.surface !== 'terminal' || event.props.hasSurvey || !isRoomy) {
-      bandId = null;
-      return theirs;
-    }
-    bandId = event.requestId;
-    const cells = encodeCells();
-    sentCells = isImage ? null : cells;
-    const { Box, Raster, Image } = engine.ui.resolve(event);
-    const corner = isImage ? (
-      <Image
-        key={RASTER_KEY}
-        columns={columns}
-        rows={rows}
-        source={createImageSource(cells)}
-        alt={partner.line.forms[partner.stage]}
-      />
-    ) : (
-      <Raster key={RASTER_KEY} columns={columns} rows={rows} cells={cells} />
-    );
-    if (!theirs) return corner;
-    return (
-      <Box flexDirection="row" justifyContent="space-between">
-        <Box flexGrow={1}>{theirs}</Box>
-        {corner}
-      </Box>
-    );
+    const corner =
+      event.surface === 'terminal'
+        ? drawTerminalCorner(engine, event)
+        : drawDesktopCorner(engine, event);
+    return corner === null ? theirs : placeCorner(engine.ui.resolve(event), theirs, corner);
   });
 };
 

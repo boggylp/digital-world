@@ -7,8 +7,8 @@ const FORCED_IMAGE_ENV = new Map([['CLAUDE_CODE_FORCE_TERMINAL_IMAGES', '1']]);
 const createReply = (text: string, surface: 'terminal' | 'desktop') =>
   ({ plugin: 'digivice', component: 'AssistantMessage', requestId: 'reply-1', surface, props: { text, isFirstOfReply: true } }) as const;
 
-const createToolResult = (tool: string, output: unknown) =>
-  ({ plugin: 'digivice', component: 'ToolResult', requestId: 'tool-1', surface: 'terminal', props: { tool_use_id: 'tool-1', tool, output, isErrored: false } }) as const;
+const createToolResult = (tool: string, output: unknown, surface: 'terminal' | 'desktop' = 'terminal') =>
+  ({ plugin: 'digivice', component: 'ToolResult', requestId: 'tool-1', surface, props: { tool_use_id: 'tool-1', tool, output, isErrored: false } }) as const;
 
 const drawEngineText: Hook<'ui.render'> = (engine, event) => {
   const { Text } = engine.ui.resolve(event);
@@ -82,12 +82,52 @@ test('Reply_ProseWithPath_HandsEngineALinkedPath', async (engine, listen) => {
   await view.unmount();
 });
 
-test('Reply_OnDesktop_LeavesReplyToEngine', async (engine, listen) => {
-  listen('ui.render', drawEngineText);
-  const view = await engine.ui.mount(createReply('```bar\na: 1\n```', 'desktop'));
-  const text = await view.find({ type: 'Text' });
+const testDesktopChart = (fence: string, mark: string): void => {
+  test(`Reply_${fence}ChartOnDesktop_DrawsSvg`, async (engine, listen) => {
+    listen('env.get', () => ({ value: undefined }));
+    const view = await engine.ui.mount(createReply(`\`\`\`${fence}\nmega: 100, 80\nultimate: 50, 60\n\`\`\``, 'desktop'));
+    const chart = await view.find({ type: 'Svg' });
 
-  expect(text?.text).toBe('engine');
+    expect(chart?.props).toMatchObject({ alt: `${fence} chart: mega 100, 80; ultimate 50, 60`, source: expect.stringContaining(mark) });
+    await view.unmount();
+  });
+};
+
+testDesktopChart('bar', '<rect ');
+testDesktopChart('hbar', '<rect ');
+testDesktopChart('line', '<polyline ');
+testDesktopChart('spark', '<polyline ');
+testDesktopChart('pie', 'stroke-dasharray');
+
+test('Reply_ChartOverSvgLimitOnDesktop_DrawsTextBars', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  const rows = Array.from({ length: 1000 }, (_row, index) => `row ${index}: ${index + 1}`).join('\n');
+  const view = await engine.ui.mount(createReply(`\`\`\`hbar\n${rows}\n\`\`\``, 'desktop'));
+  const bar = await view.find({ type: 'Text', text: /^row 999 /u });
+
+  expect(await view.find({ type: 'Svg' })).toBeUndefined();
+  expect(bar?.text).toMatch(/█ 1,000$/u);
+  await view.unmount();
+});
+
+test('Reply_HeadingAndCodeOnDesktop_DrawsTextAndCode', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  const view = await engine.ui.mount(createReply('# Partner\n\n```ts\nconst egg = 1;\n```', 'desktop'));
+
+  const heading = await view.find({ type: 'Text', text: /Partner/u });
+
+  expect(heading?.text).toBe('✦ Partner');
+  expect(await view.find({ type: 'Code' })).toMatchObject({ props: { source: 'const egg = 1;', language: 'ts' } });
+  await view.unmount();
+});
+
+test('Reply_LocalPngOnDesktop_DrawsSvgImage', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  listen('fs.stat', () => ({ value: { kind: 'file', size: 70, mtimeMs: 1, isLink: false } }));
+  listen('fs.read', () => ({ value: { base64: DOT_PNG_BASE64 } }));
+  const view = await engine.ui.mount(createReply('![egg](/tmp/egg.png)', 'desktop'));
+
+  expect(await view.find({ type: 'Svg' })).toMatchObject({ props: { alt: 'egg', source: expect.stringContaining(`href="data:image/png;base64,${DOT_PNG_BASE64}"`) } });
   await view.unmount();
 });
 
@@ -104,6 +144,14 @@ test('ToolResult_ReadOfPngInImageTerminal_ShowsImage', async (engine, listen) =>
   const view = await engine.ui.mount(createToolResult('Read', { type: 'image', file: { base64: DOT_PNG_BASE64, type: 'image/png', originalSize: 70 } }));
 
   expect(await view.find({ type: 'Image' })).toMatchObject({ props: { columns: 1, rows: 1 } });
+  await view.unmount();
+});
+
+test('ToolResult_ReadOfPngOnDesktop_ShowsSvgImage', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  const view = await engine.ui.mount(createToolResult('Read', { type: 'image', file: { base64: DOT_PNG_BASE64, type: 'image/png', originalSize: 70 } }, 'desktop'));
+
+  expect(await view.find({ type: 'Svg' })).toMatchObject({ props: { alt: 'image preview' } });
   await view.unmount();
 });
 
@@ -144,5 +192,17 @@ test('Command_Digivice_ToursChartsGraphsAndImages', async (engine, listen) => {
   const branch = await view.find({ type: 'Text', text: /Dark Champion/u });
 
   expect(branch?.text).toBe('        └─▶ ‹fear› Dark Champion');
+  await view.unmount();
+});
+
+test('Command_DigiviceOnDesktop_DrawsChartsAsSvg', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  listen('command.register', () => ({ value: { command: 'digivice' } }));
+  listen('session.start', (_engine, event) => ({ cwd: event.cwd }));
+  await engine.session.start({ cwd: '/', surface: 'desktop', isInteractive: true });
+  const { text = '' } = await engine.command.run({ command: 'digivice', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
+  const view = await engine.ui.mount({ plugin: 'digivice', component: 'CommandOutput', requestId: 'tour', surface: 'desktop', props: { command: 'digivice', args: '', text, isErrored: false } });
+
+  expect(await view.find({ type: 'Svg' })).toBeDefined();
   await view.unmount();
 });

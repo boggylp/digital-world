@@ -1,22 +1,26 @@
-import type { EngineInterface, ElementTable, MatchedHook, Register, RenderChildren, RenderElement } from 'claude-code';
+import type { EngineInterface, ElementTable, MatchedHook, Register, RenderChildren, RenderElement, RenderSurface } from 'claude-code';
 
 import { isPlainProse, splitBlocks, type Block } from '../src/blocks.ts';
-import { parseChart, renderChart, type Line } from '../src/charts.ts';
+import { describeChart, parseChart, renderChart, type Chart, type Line } from '../src/charts.ts';
 import { parseGraph, renderGraph } from '../src/flow.ts';
 import { decodeBase64Prefix, fitImage, isRemote, MAX_IMAGE_BASE64, PNG_HEADER_BYTES, readPngSize, resolveLocalPath, type Size } from '../src/image.ts';
 import { createFileHref, linkifyPaths } from '../src/links.ts';
 import { VIBES } from '../src/palette.ts';
 import { toSlashes } from '../src/paths.ts';
 import { DEMO_TEXT } from '../src/demo.ts';
+import { createPictureSvg, MAX_SVG_CHARS, renderChartSvg } from '../src/svg.ts';
 import { pickPastWord, pickPresentWord } from '../src/words.ts';
 import { LOOK, LOOK_PROBLEMS, SCENE } from './look.ts';
 
 type Terminal = ElementTable<'terminal'>;
-type Context = { terminal: Terminal; columns: number; home: string; showsImages: boolean };
+type Shared = Pick<Terminal, 'Box' | 'Text' | 'Link' | 'Code' | 'Markdown'>;
+type Canvas = { kind: 'image'; Image: Terminal['Image'] } | { kind: 'svg'; Svg: ElementTable<'desktop'>['Svg'] };
+type Context = { elements: Shared; canvas: Canvas; columns: number; home: string; showsImages: boolean };
 
 const HEADING_MARKS = ['✦ ', '◆ ', '◇ ', '· ', '· ', '· '];
 const HEADING_COLORS = [VIBES.sun, VIBES.sky, VIBES.leaf, VIBES.teal, VIBES.lavender, VIBES.blossom];
 const IMAGE_TERMINALS = new Set(['ghostty', 'kitty', 'iTerm.app', 'WezTerm']);
+const DRAWN_SURFACES = new Set<RenderSurface>(['terminal', 'desktop']);
 const SCENE_NAME = 'digital-world';
 const MAX_CACHED_IMAGES = 32;
 const FRAME_WIDTH = 4;
@@ -43,64 +47,78 @@ const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
   return !multiplexer && (Boolean(kitty) || IMAGE_TERMINALS.has(program ?? ''));
 };
 
-const drawLines = (terminal: Terminal, lines: readonly Line[]): RenderElement => (
-  <terminal.Box flexDirection="column">
+const drawLines = (elements: Shared, lines: readonly Line[]): RenderElement => (
+  <elements.Box flexDirection="column">
     {lines.map(line => (
-      <terminal.Text wrap="truncate">
+      <elements.Text wrap="truncate">
         {line
           .filter(run => run.text)
           .map(run => (
-            <terminal.Text {...(run.color ? { color: run.color } : {})} dimColor={run.dim === true} bold={run.bold === true}>
+            <elements.Text {...(run.color ? { color: run.color } : {})} dimColor={run.dim === true} bold={run.bold === true}>
               {run.text}
-            </terminal.Text>
+            </elements.Text>
           ))}
-      </terminal.Text>
+      </elements.Text>
     ))}
-  </terminal.Box>
+  </elements.Box>
 );
 
-const drawFrame = (terminal: Terminal, color: string, children: RenderChildren): RenderElement => (
-  <terminal.Box flexDirection="column" borderStyle="round" borderColor={color} paddingX={1}>
+const drawFrame = (elements: Shared, color: string, children: RenderChildren): RenderElement => (
+  <elements.Box flexDirection="column" borderStyle="round" borderColor={color} paddingX={1}>
     {children}
-  </terminal.Box>
+  </elements.Box>
 );
 
-const drawCode = (terminal: Terminal, language: string, source: string): RenderElement =>
-  drawFrame(terminal, VIBES.mountain, [
-    language ? <terminal.Text color={VIBES.sun} bold>{language}</terminal.Text> : null,
-    <terminal.Code source={source} {...(language ? { language } : {})} />
+const drawCode = (elements: Shared, language: string, source: string): RenderElement =>
+  drawFrame(elements, VIBES.mountain, [
+    language ? <elements.Text color={VIBES.sun} bold>{language}</elements.Text> : null,
+    <elements.Code source={source} {...(language ? { language } : {})} />
   ]);
 
-const drawLinkRow = (terminal: Terminal, glyph: string, href: string, label: string, note?: string): RenderElement => (
-  <terminal.Text>
-    <terminal.Text color={VIBES.sky}>{glyph} </terminal.Text>
-    <terminal.Link href={href} label={label || href} />
-    {note ? <terminal.Text dimColor> {note}</terminal.Text> : null}
-  </terminal.Text>
+const drawLinkRow = (elements: Shared, glyph: string, href: string, label: string, note?: string): RenderElement => (
+  <elements.Text>
+    <elements.Text color={VIBES.sky}>{glyph} </elements.Text>
+    <elements.Link href={href} label={label || href} />
+    {note ? <elements.Text dimColor> {note}</elements.Text> : null}
+  </elements.Text>
 );
 
-const readPicture = (base64: string): Picture | null => {
+const readPicture = (base64: string, maxChars: number): Picture | null => {
   const size = readPngSize(decodeBase64Prefix(base64, PNG_HEADER_BYTES));
-  return size && base64.length <= MAX_IMAGE_BASE64 ? { base64, size } : null;
+  return size && base64.length <= maxChars ? { base64, size } : null;
 };
 
-const drawPicture = (terminal: Terminal, context: Context, picture: Picture, alt: string): RenderElement => {
+const readPictureLimit = (canvas: Canvas): number => (canvas.kind === 'svg' ? MAX_SVG_CHARS : MAX_IMAGE_BASE64);
+
+const drawPicture = (context: Context, picture: Picture, alt: string): RenderElement | null => {
+  const { canvas } = context;
+  if (canvas.kind === 'svg') {
+    const source = createPictureSvg(picture.base64, picture.size);
+    return source === null ? null : <canvas.Svg source={source} alt={alt || 'image'} />;
+  }
   const box = fitImage(picture.size, context.columns);
-  return <terminal.Image source={{ png: picture.base64 }} columns={box.columns} rows={box.rows} alt={alt || ' '} />;
+  return <canvas.Image source={{ png: picture.base64 }} columns={box.columns} rows={box.rows} alt={alt || ' '} />;
+};
+
+const drawChart = (context: Context, chart: Chart): RenderElement => {
+  const { canvas, elements } = context;
+  const source = canvas.kind === 'svg' ? renderChartSvg(chart) : null;
+  const drawing = canvas.kind === 'svg' && source !== null ? <canvas.Svg source={source} alt={describeChart(chart)} /> : drawLines(elements, renderChart(chart, context.columns - FRAME_WIDTH));
+  return drawFrame(elements, VIBES.sky, drawing);
 };
 
 const pictures = new Map<string, Promise<Picture | null>>();
 
-const readPictureFile = async (engine: EngineInterface, path: string): Promise<Picture | null> => {
+const readPictureFile = async (engine: EngineInterface, path: string, maxChars: number): Promise<Picture | null> => {
   const file = await engine.fs.read(path, { as: 'bytes' }).catch(() => null);
-  return file ? readPicture(file.base64) : null;
+  return file ? readPicture(file.base64, maxChars) : null;
 };
 
-const loadPicture = async (engine: EngineInterface, path: string): Promise<Picture | null> => {
+const loadPicture = async (engine: EngineInterface, path: string, maxChars: number): Promise<Picture | null> => {
   const stat = await engine.fs.stat(path).catch(() => null);
   if (!stat) return null;
-  const key = `${path}\0${stat.mtimeMs}`;
-  const cached = pictures.get(key) ?? readPictureFile(engine, path);
+  const key = `${path}\0${stat.mtimeMs}\0${maxChars}`;
+  const cached = pictures.get(key) ?? readPictureFile(engine, path, maxChars);
   pictures.delete(key);
   pictures.set(key, cached);
   if (pictures.size > MAX_CACHED_IMAGES) pictures.delete(pictures.keys().next().value ?? key);
@@ -108,47 +126,48 @@ const loadPicture = async (engine: EngineInterface, path: string): Promise<Pictu
 };
 
 const drawImage = async (engine: EngineInterface, context: Context, alt: string, source: string): Promise<RenderElement> => {
-  const { terminal, home } = context;
-  if (isRemote(source)) return drawLinkRow(terminal, '▣', source, alt);
+  const { elements, home } = context;
+  if (isRemote(source)) return drawLinkRow(elements, '▣', source, alt);
   const path = resolveLocalPath(source, home);
   const href = createFileHref(path, home);
-  if (!context.showsImages || !path.toLowerCase().endsWith('.png')) return drawLinkRow(terminal, '▣', href, alt);
-  const picture = await loadPicture(engine, path);
-  if (!picture) return drawLinkRow(terminal, '▣', href, alt, '(not shown)');
+  if (!context.showsImages || !path.toLowerCase().endsWith('.png')) return drawLinkRow(elements, '▣', href, alt);
+  const picture = await loadPicture(engine, path, readPictureLimit(context.canvas));
+  const drawn = picture ? drawPicture(context, picture, alt) : null;
+  if (!drawn) return drawLinkRow(elements, '▣', href, alt, '(not shown)');
   return (
-    <terminal.Box flexDirection="column">
-      {drawPicture(terminal, context, picture, alt)}
-      {drawLinkRow(terminal, '▣', href, alt || path)}
-    </terminal.Box>
+    <elements.Box flexDirection="column">
+      {drawn}
+      {drawLinkRow(elements, '▣', href, alt || path)}
+    </elements.Box>
   );
 };
 
 const drawBlock = (engine: EngineInterface, context: Context, block: Block): RenderElement | Promise<RenderElement> => {
-  const { terminal, columns, home } = context;
+  const { elements, home } = context;
   switch (block.kind) {
     case 'markdown': {
-      return <terminal.Markdown text={linkifyPaths(block.text, home)} />;
+      return <elements.Markdown text={linkifyPaths(block.text, home)} />;
     }
     case 'heading': {
       return (
-        <terminal.Text bold color={HEADING_COLORS[block.level - 1] ?? VIBES.sun}>
+        <elements.Text bold color={HEADING_COLORS[block.level - 1] ?? VIBES.sun}>
           {HEADING_MARKS[block.level - 1]}
           {block.text.replaceAll(/\*\*|__|`/gu, '')}
-        </terminal.Text>
+        </elements.Text>
       );
     }
     case 'code': {
-      return drawCode(terminal, block.language, block.source);
+      return drawCode(elements, block.language, block.source);
     }
     case 'chart': {
       const chart = parseChart(block.language, block.source);
-      if ('error' in chart) return drawCode(terminal, block.language, `${block.source}\n# ${chart.error}`);
-      return drawFrame(terminal, VIBES.sky, drawLines(terminal, renderChart(chart, columns - FRAME_WIDTH)));
+      if ('error' in chart) return drawCode(elements, block.language, `${block.source}\n# ${chart.error}`);
+      return drawChart(context, chart);
     }
     case 'flow': {
       const graph = parseGraph(block.source, block.dialect);
-      if (graph.nodes.size === 0) return drawCode(terminal, block.dialect, block.source);
-      return drawFrame(terminal, VIBES.leaf, drawLines(terminal, renderGraph(graph)));
+      if (graph.nodes.size === 0) return drawCode(elements, block.dialect, block.source);
+      return drawFrame(elements, VIBES.leaf, drawLines(elements, renderGraph(graph)));
     }
     case 'image': {
       return drawImage(engine, context, block.alt, block.source);
@@ -159,9 +178,9 @@ const drawBlock = (engine: EngineInterface, context: Context, block: Block): Ren
 const drawBlocks = async (engine: EngineInterface, context: Context, blocks: readonly Block[]): Promise<RenderElement> => {
   const drawn = await Promise.all(blocks.map(block => drawBlock(engine, context, block)));
   return (
-    <context.terminal.Box flexDirection="column" rowGap={1} flexGrow={1}>
+    <context.elements.Box flexDirection="column" rowGap={1} flexGrow={1}>
       {drawn}
-    </context.terminal.Box>
+    </context.elements.Box>
   );
 };
 
@@ -169,51 +188,64 @@ const cache: { home?: Promise<string>; showsImages?: Promise<boolean> } = {};
 
 const readCachedHome = (engine: EngineInterface): Promise<string> => (cache.home ??= readHome(engine));
 
-const createContext = async (engine: EngineInterface, terminal: Terminal, viewportColumns: number | undefined): Promise<Context> => ({
-  terminal,
-  columns: Math.max(MIN_COLUMNS, (viewportColumns ?? DEFAULT_COLUMNS) - VIEWPORT_MARGIN),
-  home: await readCachedHome(engine),
-  showsImages: await (cache.showsImages ??= readImageSupport(engine).catch(() => false))
-});
+type Drawn = { surface: RenderSurface; table: ElementTable; viewportColumns: number | undefined };
+
+const pickCanvas = (surface: RenderSurface, table: ElementTable): Canvas => {
+  if (surface !== 'terminal' && 'Svg' in table) return { kind: 'svg', Svg: table.Svg };
+  if ('Image' in table) return { kind: 'image', Image: table.Image };
+  throw new Error(`No picture element on ${surface}`);
+};
+
+const createContext = async (engine: EngineInterface, { surface, table, viewportColumns }: Drawn): Promise<Context> => {
+  const canvas = pickCanvas(surface, table);
+  return {
+    elements: table,
+    canvas,
+    columns: Math.max(MIN_COLUMNS, (viewportColumns ?? DEFAULT_COLUMNS) - VIEWPORT_MARGIN),
+    home: await readCachedHome(engine),
+    showsImages: canvas.kind === 'svg' || (await (cache.showsImages ??= readImageSupport(engine).catch(() => false)))
+  };
+};
 
 const renderReply: MatchedHook<'ui.render', { component: 'AssistantMessage' }> = async (engine, event, next) => {
-  if (event.surface !== 'terminal' || event.props.isSummary) return next(event);
+  if (!DRAWN_SURFACES.has(event.surface) || event.props.isSummary) return next(event);
   const blocks = splitBlocks(event.props.text);
   if (isPlainProse(blocks)) {
     const text = linkifyPaths(event.props.text, await readCachedHome(engine));
     return text === event.props.text ? next(event) : next({ ...event, props: { ...event.props, text } });
   }
-  const terminal = engine.ui.resolve(event);
-  const context = await createContext(engine, terminal, event.viewport?.columns);
+  const elements = engine.ui.resolve(event);
+  const context = await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns });
   return (
-    <terminal.Box flexDirection="row">
-      <terminal.Text color={VIBES.sun}>{event.props.isFirstOfReply ? '◉ ' : '  '}</terminal.Text>
+    <elements.Box flexDirection="row">
+      <elements.Text color={VIBES.sun}>{event.props.isFirstOfReply ? '◉ ' : '  '}</elements.Text>
       {await drawBlocks(engine, { ...context, columns: context.columns - REPLY_GUTTER }, blocks)}
-    </terminal.Box>
+    </elements.Box>
   );
 };
 
 const renderToolResult: MatchedHook<'ui.render', { component: 'ToolResult' }> = async (engine, event, next) => {
-  if (event.surface !== 'terminal' || event.props.isErrored || event.props.isExpanded || typeof event.props.output !== 'object' || event.props.output === null) return next(event);
+  if (!DRAWN_SURFACES.has(event.surface) || event.props.isErrored || event.props.isExpanded || typeof event.props.output !== 'object' || event.props.output === null) return next(event);
   const output = event.props.output as { type?: unknown; filePath?: unknown; file?: { base64?: unknown; type?: unknown } };
-  const terminal = engine.ui.resolve(event);
-  const context = await createContext(engine, terminal, event.viewport?.columns);
+  const elements = engine.ui.resolve(event);
+  const context = await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns });
   if ((event.props.tool === 'Write' || event.props.tool === 'Edit') && typeof output.filePath === 'string') {
     return (
-      <terminal.Box flexDirection="column">
+      <elements.Box flexDirection="column">
         {await next(event)}
-        {drawLinkRow(terminal, '  ↗', createFileHref(output.filePath, context.home), output.filePath)}
-      </terminal.Box>
+        {drawLinkRow(elements, '  ↗', createFileHref(output.filePath, context.home), output.filePath)}
+      </elements.Box>
     );
   }
   const isPngRead = event.props.tool === 'Read' && output.type === 'image' && output.file?.type === 'image/png' && typeof output.file.base64 === 'string';
-  const picture = isPngRead && context.showsImages ? readPicture(String(output.file?.base64)) : null;
-  if (!picture) return next(event);
+  const picture = isPngRead && context.showsImages ? readPicture(String(output.file?.base64), readPictureLimit(context.canvas)) : null;
+  const drawn = picture ? drawPicture(context, picture, 'image preview') : null;
+  if (!drawn) return next(event);
   return (
-    <terminal.Box flexDirection="column">
+    <elements.Box flexDirection="column">
       {await next(event)}
-      {drawPicture(terminal, context, picture, 'image preview')}
-    </terminal.Box>
+      {drawn}
+    </elements.Box>
   );
 };
 
@@ -242,9 +274,9 @@ export const register: Register = listen => {
   listen('ui.render', { component: 'AssistantMessage' }, renderReply);
 
   listen('ui.render', { component: 'CommandOutput' }, async (engine, event, next) => {
-    if (event.surface !== 'terminal' || event.props.command !== 'digivice' || event.props.isErrored) return next(event);
-    const terminal = engine.ui.resolve(event);
-    return drawBlocks(engine, await createContext(engine, terminal, event.viewport?.columns), splitBlocks(event.props.text));
+    if (!DRAWN_SURFACES.has(event.surface) || event.props.command !== 'digivice' || event.props.isErrored) return next(event);
+    const elements = engine.ui.resolve(event);
+    return drawBlocks(engine, await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns }), splitBlocks(event.props.text));
   });
 
   listen('ui.render', { component: 'ToolResult' }, renderToolResult);
