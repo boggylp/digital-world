@@ -5,7 +5,7 @@ const ANSI_NAMES = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan'
 
 const readAnsiName = (color: string | undefined): string | undefined => {
   const index = /^#0(?<index>[0-7])000000$/u.exec(color ?? '')?.groups?.['index'];
-  return index === undefined ? undefined : ANSI_NAMES[Number(index)];
+  return index === undefined ? undefined : `ansi:${ANSI_NAMES[Number(index)]}`;
 };
 
 export const isHighlightable = (language: string): boolean => languages.has(language.toLowerCase());

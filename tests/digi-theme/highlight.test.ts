@@ -8,29 +8,29 @@ describe('highlightLines', () => {
     const lines = highlightLines('const answer: number = await compute({ retries: 3 }, "label");', 'ts');
 
     expect([colorOf(lines, 'const'), colorOf(lines, '3'), colorOf(lines, '"label"'), colorOf(lines, 'compute')]).toStrictEqual([
-      'magenta',
-      'yellow',
-      'green',
-      'blue'
+      'ansi:magenta',
+      'ansi:yellow',
+      'ansi:green',
+      'ansi:blue'
     ]);
   });
 
   it('highlightLines_TypeScriptDeclarationAndParameter_KeepsVariablePlainAndColorsParameter', () => {
     const lines = highlightLines('const answer: number = 1;\nfunction load(id: string) {}', 'ts');
 
-    expect([colorOf(lines, ' answer'), colorOf(lines, 'id')]).toStrictEqual([undefined, 'cyan']);
+    expect([colorOf(lines, ' answer'), colorOf(lines, 'id')]).toStrictEqual([undefined, 'ansi:cyan']);
   });
 
   it('highlightLines_Yaml_ColorsKeysAndValues', () => {
     const lines = highlightLines('apps:\n  dotnet: { scope: machine }', 'yaml');
 
-    expect([colorOf(lines, 'apps'), colorOf(lines, 'scope'), colorOf(lines, 'machine')]).toStrictEqual(['red', 'red', 'green']);
+    expect([colorOf(lines, 'apps'), colorOf(lines, 'scope'), colorOf(lines, 'machine')]).toStrictEqual(['ansi:red', 'ansi:red', 'ansi:green']);
   });
 
   it('highlightLines_TomlInlineTable_TreatsQuotedAndBareKeysAlike', () => {
     const lines = highlightLines('"quoted.key" = { scope = "machine" }', 'toml');
 
-    expect([colorOf(lines, '"quoted.key" = { scope = '), colorOf(lines, '"machine"')]).toStrictEqual([undefined, 'green']);
+    expect([colorOf(lines, '"quoted.key" = { scope = '), colorOf(lines, '"machine"')]).toStrictEqual([undefined, 'ansi:green']);
   });
 
   it('highlightLines_Markup_KeepsSourceText', () => {
