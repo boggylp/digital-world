@@ -102,10 +102,10 @@ test('band_ImageMode_FitsCompactViewport', async (engine, hook) => {
   await startSession(engine);
   const band = await engine.ui.mount({
     ...BAND,
-    props: { ...BAND.props, bodyColumns: 8, maxRows: 4 }
+    props: { ...BAND.props, bodyColumns: 4, maxRows: 2 }
   });
 
   const image = await band.find({ type: 'Image', key: 'partner' });
 
-  expect(image?.props.columns).toBe(8);
+  expect(image?.props).toMatchObject({ columns: 4, rows: 2 });
 });

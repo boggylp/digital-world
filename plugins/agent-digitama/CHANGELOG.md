@@ -8,6 +8,10 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 - The partner in the Claude Code desktop app, drawn as vector pixel art above the prompt.
 
+### Changed
+
+- The image partner in the terminal takes 4 columns by 2 rows, half its earlier width and height.
+
 ## [0.1.0] - 2026-11-14
 
 ### Added

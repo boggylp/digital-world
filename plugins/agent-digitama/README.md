@@ -18,7 +18,7 @@ The desktop app always uses the detailed sprites, 64 pixels tall. In the termina
 
 | Renderer | Minimum band width | Minimum band height |
 | --- | --- | --- |
-| Image | 8 columns | 4 rows |
+| Image | 4 columns | 2 rows |
 | Text cells | 24 columns | 8 rows |
 
 In the terminal, the partner hides when the band cannot fit its renderer. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
