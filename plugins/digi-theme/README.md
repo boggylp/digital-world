@@ -22,7 +22,7 @@ Run `/digi-theme` for a tour of everything it draws.
 | `![alt](path.png)` on its own line | The picture inline, with a clickable link under it |
 | An absolute path such as `C:\repo\a.ts` or `~/notes/a.md:12` | A link that opens the file |
 | A heading | A colored heading with a mark per level |
-| A code block | A framed block with its language on top |
+| A code block | A framed block with its language on top. In the terminal its tokens take your terminal's own colors |
 
 A `Read` of a PNG shows the image under the tool row. A `Write` or `Edit` adds a link to the file it changed. The spinner and the turn footer use words like `Digivolving` and `Digivolved`.
 
@@ -45,6 +45,10 @@ The desktop app draws charts as vector graphics 560 pixels wide, shortening long
 
 `bar`, `hbar` and `pie` read the first value of each line as one category. `line` and `spark` read every value as a series. A block that does not parse draws as code with the reason under it.
 
+## Code colors
+
+In the terminal, code blocks are colored with the terminal's named ANSI colors, so they follow whatever palette your terminal or its host uses. Keywords are magenta, strings green, numbers yellow, types cyan, functions blue, keys red and comments gray. The highlighter is a bundled [highlight.js](https://highlightjs.org/) 11.12 with its 37 common languages plus PowerShell and Dockerfile. A language outside that set is left to Claude Code's own highlighter.
+
 ## Images
 
 The desktop app draws local PNGs up to about 95 KB and links larger ones. In the terminal, images draw in Ghostty, kitty, WezTerm and iTerm2 outside tmux. Set [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1`](https://code.claude.com/docs/en/plugins/mods/gallery.md) when your terminal path draws images but is not detected. Elsewhere, and for remote or non-PNG images, the mod draws a clickable link.
@@ -59,4 +63,8 @@ npm run typecheck
 claude --plugin-dir .      # a session with the working copy
 ```
 
-`npm run image:build` redraws the demo egg in `assets/digitama.png`. The drawing logic in `src/` is plain TypeScript, and only `hooks/` talks to Claude Code.
+`npm run highlight:build` rebundles highlight.js into `src/highlight.generated.js`. `npm run image:build` redraws the demo egg in `assets/digitama.png`. The drawing logic in `src/` is plain TypeScript, and only `hooks/` talks to Claude Code.
+
+## Credits
+
+[highlight.js](https://github.com/highlightjs/highlight.js) is bundled under the BSD 3-Clause License, Copyright (c) 2006, Ivan Sagalaev.

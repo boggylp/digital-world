@@ -3,6 +3,7 @@ import type { EngineInterface, ElementTable, MatchedHook, Register, RenderChildr
 import { isPlainProse, splitBlocks, type Block } from '../src/blocks.ts';
 import { describeChart, parseChart, renderChart, type Chart, type Line } from '../src/charts.ts';
 import { parseGraph, renderGraph } from '../src/flow.ts';
+import { highlightLines, isHighlightable } from '../src/highlight.ts';
 import { decodeBase64Prefix, fitImage, isRemote, MAX_IMAGE_BASE64, PNG_HEADER_BYTES, readPngSize, resolveLocalPath, type Size } from '../src/image.ts';
 import { createFileHref, linkifyPaths } from '../src/links.ts';
 import { VIBES } from '../src/palette.ts';
@@ -47,10 +48,10 @@ const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
   return !multiplexer && (Boolean(kitty) || IMAGE_TERMINALS.has(program ?? ''));
 };
 
-const drawLines = (elements: Shared, lines: readonly Line[]): RenderElement => (
+const drawLines = (elements: Shared, lines: readonly Line[], wrap: 'truncate' | 'wrap' = 'truncate'): RenderElement => (
   <elements.Box flexDirection="column">
     {lines.map(line => (
-      <elements.Text wrap="truncate">
+      <elements.Text wrap={wrap}>
         {line
           .filter(run => run.text)
           .map(run => (
@@ -69,10 +70,14 @@ const drawFrame = (elements: Shared, color: string, children: RenderChildren): R
   </elements.Box>
 );
 
-const drawCode = (elements: Shared, language: string, source: string): RenderElement =>
+const drawCode = ({ elements, canvas }: Context, language: string, source: string): RenderElement =>
   drawFrame(elements, VIBES.mountain, [
     language ? <elements.Text color={VIBES.sun} bold>{language}</elements.Text> : null,
-    <elements.Code source={source} {...(language ? { language } : {})} />
+    canvas.kind === 'image' && isHighlightable(language) ? (
+      drawLines(elements, highlightLines(source, language), 'wrap')
+    ) : (
+      <elements.Code source={source} {...(language ? { language } : {})} />
+    )
   ]);
 
 const drawLinkRow = (elements: Shared, glyph: string, href: string, label: string, note?: string): RenderElement => (
@@ -157,16 +162,16 @@ const drawBlock = (engine: EngineInterface, context: Context, block: Block): Ren
       );
     }
     case 'code': {
-      return drawCode(elements, block.language, block.source);
+      return drawCode(context, block.language, block.source);
     }
     case 'chart': {
       const chart = parseChart(block.language, block.source);
-      if ('error' in chart) return drawCode(elements, block.language, `${block.source}\n# ${chart.error}`);
+      if ('error' in chart) return drawCode(context, block.language, `${block.source}\n# ${chart.error}`);
       return drawChart(context, chart);
     }
     case 'flow': {
       const graph = parseGraph(block.source, block.dialect);
-      if (graph.nodes.size === 0) return drawCode(elements, block.dialect, block.source);
+      if (graph.nodes.size === 0) return drawCode(context, block.dialect, block.source);
       return drawFrame(elements, VIBES.leaf, drawLines(elements, renderGraph(graph)));
     }
     case 'image': {

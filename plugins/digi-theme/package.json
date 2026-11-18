@@ -4,6 +4,11 @@
   "type": "module",
   "scripts": {
     "image:build": "node scripts/build-demo-image.ts",
-    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.json",
+    "highlight:build": "node scripts/build-highlight.ts"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "highlight.js": "11.12.0"
   }
 }

@@ -47,6 +47,24 @@ test('Reply_UnparseableChart_DrawsReasonUnderSource', async (engine, listen) => 
   await view.unmount();
 });
 
+test('Reply_TomlFenceInTerminal_ColorsKeysWithTerminalPalette', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  const view = await engine.ui.mount(createReply('```toml\n"Microsoft.DotNet.SDK.11" = { scope = "machine" }\n```', 'terminal'));
+  const runs = await view.findAll({ type: 'Text', text: /^"Microsoft\.DotNet\.SDK\.11"$/u });
+
+  expect(runs.map(run => run.props['color'])).toContain('red');
+  expect(await view.find({ type: 'Code' })).toBeUndefined();
+  await view.unmount();
+});
+
+test('Reply_TomlFenceOnDesktop_LeavesCodeToEngine', async (engine, listen) => {
+  listen('env.get', () => ({ value: undefined }));
+  const view = await engine.ui.mount(createReply('```toml\na = 1\n```', 'desktop'));
+
+  expect(await view.find({ type: 'Code' })).toMatchObject({ props: { source: 'a = 1', language: 'toml' } });
+  await view.unmount();
+});
+
 test('Reply_MermaidFlowchart_DrawsTree', async (engine, listen) => {
   listen('env.get', () => ({ value: undefined }));
   const view = await engine.ui.mount(createReply('```mermaid\ngraph TD\negg[Digitama] --> baby[Baby]\n```', 'terminal'));
