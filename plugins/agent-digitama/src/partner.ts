@@ -1,5 +1,4 @@
 import { STAGES, type Line, type Stage } from './roster.ts';
-import { FRAMES } from './sprite.ts';
 
 export const QUESTION_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 export const ALERT_NOTIFICATIONS = new Set([
@@ -114,18 +113,6 @@ export const callPartner = (partner: Partner, isCalling: boolean): Partner => ({
   ...partner,
   isCalling
 });
-
-const cycleFrames = (frames: readonly number[], tick: number): number =>
-  frames.at(tick % frames.length) ?? 0;
-
-export const selectFrame = (partner: Partner, tick: number): number => {
-  if (partner.stage === 'Digitama') return cycleFrames(FRAMES.egg, tick);
-  if (partner.isCalling) return cycleFrames(FRAMES.angry, tick);
-  if (partner.reaction !== null && tick < partner.reactionUntilTick) {
-    return cycleFrames(FRAMES[partner.reaction], tick);
-  }
-  return cycleFrames(FRAMES.walk, tick);
-};
 
 const DUB_NAMES: Record<string, string> = {
   Piyomon: 'Biyomon',

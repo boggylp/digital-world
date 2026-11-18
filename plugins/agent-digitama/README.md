@@ -14,7 +14,7 @@ Answer `y` to add the marketplace, then pick a scope. The partner appears in the
 
 Requirements: Claude Code with mods (tested on 2.1.326), in a truecolor terminal or the desktop app. The desktop app draws the partner as vector pixel art.
 
-The desktop app always uses the detailed sprites, 64 pixels tall. In the terminal, Ghostty, kitty and compatible iTerm2 sessions use image rendering, and other terminals use text cells. If Claude refuses image updates, the partner falls back to text cells for that session.
+The desktop app always uses the detailed sprites, 64 pixels tall. In the terminal, Ghostty, kitty and compatible iTerm2 sessions use image rendering, and other terminals use text cells. If Claude refuses the first image, the partner falls back to text cells for that session.
 
 | Renderer | Minimum band width | Minimum band height |
 | --- | --- | --- |
@@ -43,9 +43,9 @@ The percentages in the table are defaults. Change them in `/config` under the pl
 
 ## Reactions
 
-- **Turn complete:** a Digimon UP partner hops, and a dot-sprite partner cheers.
-- **Tool call fails:** a Digimon UP partner flashes red, and a dot-sprite partner flinches.
-- **Claude needs you:** a Digimon UP partner pulses amber, and a dot-sprite partner turns angry.
+- **Turn complete:** the partner hops.
+- **Tool call fails:** the partner flashes red.
+- **Claude needs you:** the partner pulses amber.
 
 Claude Code hides the band while a dialog is open, so a question or permission dialog covers the signal.
 
@@ -59,14 +59,14 @@ New sessions hatch the saved partner's egg. The current session keeps its partne
 
 ## Sprites
 
-[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for the Agumon, Gabumon and Palmon lines, plus Biyomon from Rookie onward. The image renderer and the desktop app preserve the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
+[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for every form after the egg. Every form draws at the same height. The image renderer and the desktop app preserve the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
 
 | Renderer | Pixel canvas |
 | --- | --- |
 | Image and desktop | 80×80 |
 | Text cells | 24×16 |
 
-Eggs, Biyomon's early forms, Salamon and Veemon use Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/) with their original artwork, scaled evenly for image rendering. Both sets are bundled for offline use. See [CREDITS.md](CREDITS.md).
+Eggs use Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/) with their original artwork, scaled evenly for image rendering. Both sets are bundled for offline use. See [CREDITS.md](CREDITS.md).
 
 A line joins the roster only when the set has every stage from egg to Mega. Tentomon, Gomamon and Patamon lack a Baby I sprite.
 
@@ -82,7 +82,7 @@ npm run typecheck
 claude --plugin-dir .      # a session with the working copy
 ```
 
-`npm run sprites:fetch` downloads the dot sheets into `sprites/`. `npm run sprites:build` regenerates the sprite data from the bundled dot sheets and Digimon UP collection. The build fails on missing or empty frames and incomplete mapped animation sequences.
+`npm run sprites:fetch` downloads the egg dot sheets into `sprites/`. `npm run sprites:build` regenerates the sprite data from those sheets and the bundled Digimon UP collection. The build fails on missing or empty frames and incomplete mapped animation sequences.
 
 The game logic in `src/` is plain TypeScript with no host API. Only `hooks/` talks to Claude Code, so another agent harness needs only its own adapter.
 

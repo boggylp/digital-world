@@ -8,7 +8,6 @@ import {
   FRAME_SIZE,
   FRAMES,
   PIXEL_ALPHABET,
-  REQUIRED_FRAMES,
   TRANSPARENT,
   type Sheet
 } from '../src/sprite.ts';
@@ -60,16 +59,10 @@ const assertFramesDrawn = (name: string, sheet: Sheet, required: readonly number
 
 const spriteDirectory = process.argv[2] ?? 'sprites';
 const sheets: Record<string, Sheet> = {};
-for (const line of LINES) {
-  for (const [stage, name] of Object.entries(line.forms)) {
-    const sheet = await readSheet(join(spriteDirectory, `${name}.png`));
-    assertFramesDrawn(
-      name,
-      sheet,
-      stage === 'Digitama' ? [...FRAMES.egg, ...FRAMES.crack] : REQUIRED_FRAMES
-    );
-    sheets[name] = sheet;
-  }
+for (const name of LINES.map((line) => line.forms.Digitama)) {
+  const sheet = await readSheet(join(spriteDirectory, `${name}.png`));
+  assertFramesDrawn(name, sheet, [...FRAMES.egg, ...FRAMES.crack]);
+  sheets[name] = sheet;
 }
 
 const data = JSON.stringify(sheets);

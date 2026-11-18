@@ -116,6 +116,19 @@ describe.each([false, true])('readPartnerPixels (image=%s)', (isImage) => {
   });
 });
 
+describe('readPartnerPixels egg', () => {
+  it('readPartnerPixels_EggOverTwoBeats_WobblesBetweenEggFrames', () => {
+    const egg = { ...createGabumon(), stage: 'Digitama' as const };
+    const sheet = SHEETS['Gabu_Digitama'];
+    assert.isDefined(sheet);
+
+    expect([readPartnerPixels(egg, 0), readPartnerPixels(egg, 5)]).toStrictEqual([
+      placeDotPixels(readPixels(sheet, 0, false)),
+      placeDotPixels(readPixels(sheet, 1, false))
+    ]);
+  });
+});
+
 describe('readStillPixels', () => {
   it('readStillPixels_ImageRenderer_RetainsMoreThanTextCellDetail', () => {
     const pixels = readStillPixels('Gabumon', true);

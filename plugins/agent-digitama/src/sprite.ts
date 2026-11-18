@@ -10,21 +10,11 @@ export const SPRITE_CANVAS: Canvas = { columns: SPRITE_COLUMNS, height: SPRITE_H
 export const IMAGE_CANVAS: Canvas = { columns: 80, height: 80 };
 
 const CRACK_FRAME = 2;
-const HAPPY_FRAME = 7;
-const ANGRY_FRAME = 8;
-const HURT_FRAME = 9;
-const HURT_RECOIL_FRAME = 10;
 
 export const FRAMES = {
-  walk: [0, 1],
-  happy: [HAPPY_FRAME],
-  angry: [ANGRY_FRAME],
-  hurt: [HURT_FRAME, HURT_RECOIL_FRAME],
   egg: [0, 1],
   crack: [CRACK_FRAME]
 } as const;
-
-export const REQUIRED_FRAMES = [...FRAMES.walk, ...FRAMES.happy, ...FRAMES.angry, ...FRAMES.hurt];
 
 export const DEFAULT_COLOR = 0x01_00_00_00;
 const UPPER_HALF_BLOCK = 0x25_80;

@@ -1,6 +1,7 @@
-import { selectFrame, type Partner, type Reaction } from './partner.ts';
+import type { Partner, Reaction } from './partner.ts';
 import {
   FRAME_SIZE,
+  FRAMES,
   IMAGE_CANVAS,
   SPRITE_CANVAS,
   placeDotPixels,
@@ -57,7 +58,7 @@ export const readPartnerPixels = (partner: Partner, tick: number, isImage = fals
   const isMirrored = Math.floor(tick / TURN_TICKS) % FACINGS === 1;
   if (animation === undefined) {
     return placeDotPixels(
-      readDotPixels(form, selectFrame(partner, beat), isMirrored),
+      readDotPixels(form, FRAMES.egg[beat % FRAMES.egg.length] ?? 0, isMirrored),
       isImage ? IMAGE_CANVAS : SPRITE_CANVAS
     );
   }

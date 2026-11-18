@@ -9,7 +9,6 @@ import {
   nameForm,
   reactPartner,
   readThresholds,
-  selectFrame,
   type Partner
 } from '../../plugins/agent-digitama/src/partner.ts';
 import { DEFAULT_LINE, type Stage } from '../../plugins/agent-digitama/src/roster.ts';
@@ -94,25 +93,17 @@ describe('hatchPartner', () => {
   });
 });
 
-describe('selectFrame', () => {
-  it('selectFrame_CallingPartner_ShowsAngryFrame', () => {
-    const calling = callPartner(createAgumon('Rookie'), true);
-    expect(selectFrame(calling, 3)).toBe(8);
-  });
-
-  it('selectFrame_HurtPartner_ShowsHurtFrame', () => {
+describe('reactPartner', () => {
+  it('reactPartner_Rookie_ReactsForReactionTicks', () => {
     const hurt = reactPartner(createAgumon('Rookie'), 'hurt', 10);
-    expect(selectFrame(hurt, 10)).toBe(9);
+
+    expect(hurt).toMatchObject({ reaction: 'hurt', reactionUntilTick: 16 });
   });
 
-  it('selectFrame_HappyPartnerAfterReaction_WalksAgain', () => {
-    const happy = reactPartner(createAgumon('Rookie'), 'happy', 0);
-    expect(selectFrame(happy, 7)).toBe(1);
-  });
+  it('reactPartner_Egg_StaysUnchanged', () => {
+    const egg = createAgumon();
 
-  it('selectFrame_EggReactingToFailure_KeepsWobbling', () => {
-    const egg = reactPartner(createAgumon(), 'hurt', 0);
-    expect(selectFrame(egg, 1)).toBe(1);
+    expect(reactPartner(egg, 'hurt', 0)).toBe(egg);
   });
 });
 

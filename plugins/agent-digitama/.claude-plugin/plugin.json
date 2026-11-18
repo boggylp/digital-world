@@ -1,6 +1,6 @@
 {
   "name": "agent-digitama",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A Digimon partner above the prompt that hatches and digivolves as the context window fills",
   "author": {
     "name": "Bogambe"

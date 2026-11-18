@@ -37,7 +37,7 @@ await mkdir(outputDirectory, { recursive: true });
 const listings = await Promise.all(STAGE_FOLDERS.map((folderId) => listFolder(folderId)));
 const files = new Map(listings.flat());
 
-const wanted = LINES.flatMap((line) => Object.values(line.forms));
+const wanted = LINES.map((line) => line.forms.Digitama);
 const missing = wanted.filter((name) => !files.has(`${name}.png`));
 if (missing.length > 0) throw new Error(`Not in the set: ${missing.join(', ')}`);
 
