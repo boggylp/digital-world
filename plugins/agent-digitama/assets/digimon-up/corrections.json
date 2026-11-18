@@ -1,4 +1,55 @@
 {
   "pending": [],
-  "applied": []
+  "applied": [
+    {
+      "file": "gatomon/gatomon_6.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_10.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_11.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_12.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_18.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_19.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_20.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_22.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_24.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    },
+    {
+      "file": "gatomon/gatomon_25.png",
+      "rotate": 90,
+      "note": "stored lying on its side"
+    }
+  ]
 }

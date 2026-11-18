@@ -75,7 +75,7 @@ export const LINES: readonly Line[] = [
       Rookie: 'Plotmon',
       Champion: 'Tailmon',
       Ultimate: 'Angewomon',
-      Mega: 'Ophanimon'
+      Mega: 'Magnadramon'
     }
   },
   {

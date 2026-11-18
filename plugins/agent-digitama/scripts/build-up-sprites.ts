@@ -22,7 +22,15 @@ const VARIANT_TOKEN_PARTS = 2;
 const aliases: Record<string, string> = {
   Piyomon: 'biyomon',
   Hououmon: 'phoenixmon',
-  Lilimon: 'lillymon'
+  Lilimon: 'lillymon',
+  Pyocomon: 'yokomon',
+  Plotmon: 'salamon',
+  Tailmon: 'gatomon',
+  Chicomon: 'chibomon',
+  Chibimon: 'demiveemon',
+  'V-mon': 'veemon',
+  'XV-mon': 'exveemon',
+  Imperialdramon_Fighter: 'imperialdramon_fightermode'
 };
 const directory = process.argv[2] ?? 'assets/digimon-up';
 const output = process.argv[3] ?? 'src/up-sprites.generated.ts';
@@ -85,7 +93,6 @@ const buildAnimation = async (
 ): Promise<Animations> => {
   const dimensions = await Promise.all([...walking, ...idle].map((path) => sharp(path).metadata()));
   const scale = Math.min(
-    1,
     canvas.columns / Math.max(...dimensions.map(({ width }) => width ?? 0)),
     (canvas.height - canvas.height / FRAME_SIZE) /
       Math.max(...dimensions.map(({ height }) => height ?? 0))
@@ -112,11 +119,9 @@ const buildForm = async (
   upstream: string,
   record: Record<string, string>
 ): Promise<void> => {
-  if (!record.walking?.trim() || !record.idle?.trim()) {
-    throw new Error(`${upstream}: missing walking or idle sequence`);
-  }
-  const walking = resolveSequence(upstream, record.walking);
+  if (!record.idle?.trim()) throw new Error(`${upstream}: missing idle sequence`);
   const idle = resolveSequence(upstream, record.idle);
+  const walking = record.walking?.trim() ? resolveSequence(upstream, record.walking) : idle;
   sprites[name] = await buildAnimation(walking, idle, SPRITE_CANVAS);
   const image = await buildAnimation(walking, idle, IMAGE_CANVAS);
   const identifier = `image${imageImports.length}`;

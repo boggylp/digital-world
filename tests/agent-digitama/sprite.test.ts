@@ -10,11 +10,11 @@ import {
   packHalfBlocks,
   readAnimationPixels,
   readPixels,
-  REQUIRED_FRAMES,
   TRANSPARENT,
   type Sheet
 } from '../../plugins/agent-digitama/src/sprite.ts';
 import { SHEETS } from '../../plugins/agent-digitama/src/sprites.generated.ts';
+import { UP_SPRITES } from '../../plugins/agent-digitama/src/up-sprites.generated.ts';
 
 const RED = 0xff_00_00;
 const BLUE = 0x00_00_ff;
@@ -96,9 +96,12 @@ describe('sHEETS', () => {
   });
 
   it.each(LINES.flatMap(({ forms: { Digitama: _egg, ...forms } }) => Object.values(forms)))(
-    'sHEETS_%s_DrawsRequiredFrames',
+    'uP_SPRITES_%s_HasWalkingAndIdleFrames',
     (name) => {
-      expect(listBlankFrames(name, REQUIRED_FRAMES)).toStrictEqual([]);
+      const animation = UP_SPRITES[name];
+      assert.isDefined(animation);
+      expect(animation.walking.length).toBeGreaterThan(0);
+      expect(animation.idle.length).toBeGreaterThan(0);
     }
   );
 

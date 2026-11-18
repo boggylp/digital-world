@@ -10,6 +10,10 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 ### Changed
 
+- Every form draws at the same height, from babies to Megas.
+- The Veemon and Salamon lines use the Digimon UP sprites, like the other lines.
+- Salamon's line digivolves to Magnadramon, because the Digimon UP sprites have no Ophanimon.
+
 - The image partner in the terminal takes 4 columns by 2 rows, half its earlier width and height.
 
 ## [0.1.0] - 2026-11-14

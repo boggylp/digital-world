@@ -126,9 +126,9 @@ describe('readStillPixels', () => {
     expect(readStillPixels('V-mon', true)).toHaveLength(80);
   });
 
-  it('readStillPixels_UnmappedDotSprite_PreservesOriginalPixels', () => {
-    const sheet = SHEETS['V-mon'];
+  it('readStillPixels_Egg_PreservesOriginalDotPixels', () => {
+    const sheet = SHEETS['V_Digitama'];
     assert.isDefined(sheet);
-    expect(readStillPixels('V-mon')).toStrictEqual(placeDotPixels(readPixels(sheet, 0, false)));
+    expect(readStillPixels('V_Digitama')).toStrictEqual(placeDotPixels(readPixels(sheet, 0, false)));
   });
 });
