@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-11-18
+
+### Fixed
+
+- The image partner stays an image when a frame is refused while its row is hidden, as during a permission prompt.
+
 ## [0.2.1] - 2026-11-18
 
 ### Changed
@@ -32,6 +38,7 @@ All notable changes to this plugin are documented here. The format follows [Keep
 - Reactions to the session: a hop when a turn completes, a red flash when a tool call fails, and an amber pulse when Claude needs you.
 - Detailed image sprites in Ghostty, kitty and iTerm2, with text-cell sprites in other terminals.
 
+[0.2.2]: https://github.com/boggylp/digital-world/releases/tag/agent-digitama--v0.2.2
 [0.2.1]: https://github.com/boggylp/digital-world/releases/tag/agent-digitama--v0.2.1
 [0.2.0]: https://github.com/boggylp/digital-world/releases/tag/agent-digitama--v0.2.0
 [0.1.0]: https://github.com/boggylp/digital-world/releases/tag/agent-digitama--v0.1.0

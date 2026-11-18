@@ -2,7 +2,7 @@ import { expect, mock, test, type Engine } from 'claude-code/testing';
 import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
 import { createPartner } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
-import { encodeImagePixels, SPRITE_COLUMNS, SPRITE_ROWS } from '../src/sprite.ts';
+import { encodeImagePixels, IMAGE_COLUMNS, IMAGE_ROWS, SPRITE_COLUMNS, SPRITE_ROWS } from '../src/sprite.ts';
 import {
   BAND,
   stubEngine,
@@ -69,6 +69,24 @@ test('band_DeniedImageDuringHatching_RendersTextCellBaby', async (engine, hook) 
   await textBand.unmount();
 
   expect(raster?.props).toMatchObject({ columns: SPRITE_COLUMNS, rows: SPRITE_ROWS, cells: encodePartner('Botamon', 1) });
+});
+
+test('band_DeniedImageAfterOneWasDrawn_KeepsImagePartner', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12, { TERM_PROGRAM: 'ghostty' });
+  mock.store(hook);
+  let reply: { deny?: string } = {};
+  hook('ui.blit', () => ({ value: reply }));
+  await hatchAgumon(engine, clock);
+  const band = await engine.ui.mount(BAND);
+  await clock.advance(200);
+  reply = { deny: 'Nothing of this plugin is mounted there' };
+  await clock.advance(200);
+  await band.unmount();
+  const remounted = await engine.ui.mount(BAND);
+  const image = await remounted.find({ type: 'Image', key: 'partner' });
+  await remounted.unmount();
+
+  expect(image?.props).toMatchObject({ columns: IMAGE_COLUMNS, rows: IMAGE_ROWS });
 });
 
 test('band_MountedImage_SendsDetailedAnimationUpdates', async (engine, hook) => {

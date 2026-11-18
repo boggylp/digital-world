@@ -58,6 +58,7 @@ let sceneTarget: Partner | null = null;
 let isTicking = false;
 let isErrorLogged = false;
 let isImage = false;
+let hasDrawnImage = false;
 let thresholds: Thresholds | null = DEFAULT_THRESHOLDS;
 const encodedScenes = new WeakMap<Pixel[][], string>();
 
@@ -142,8 +143,9 @@ const blitFrame = async (engine: EngineInterface): Promise<void> => {
   const result = await engine.ui.blit(
     isImage ? { ...address, source: createImageSource(cells) } : { ...address, cells }
   );
+  hasDrawnImage ||= isImage && result.deny === undefined;
   if (result.deny === undefined) return;
-  if (isImage) {
+  if (isImage && !hasDrawnImage) {
     isImage = false;
     scene = null;
     sceneTarget = null;
@@ -178,6 +180,7 @@ const runTick = async (engine: EngineInterface): Promise<void> => {
 const registerLifecycleHooks = (hook: On): void => {
   hook('session.start', async (engine, event, proceed) => {
     isImage = event.surface !== 'terminal' || (await readImageSupport(engine));
+    hasDrawnImage = false;
     await hatchSavedPartner(engine);
     await engine.command.register({
       name: 'agent-digitama',
