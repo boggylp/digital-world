@@ -1,4 +1,4 @@
-import { formatNumber, parseChart, renderChart, type Chart } from '../../plugins/digivice/src/charts.ts';
+import { formatNumber, parseChart, renderChart, type Chart } from '../../plugins/digi-theme/src/charts.ts';
 import { readText } from './read-text.ts';
 
 const VERTICAL_BARS = [

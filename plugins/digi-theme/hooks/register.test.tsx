@@ -5,10 +5,10 @@ const DOT_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4
 const FORCED_IMAGE_ENV = new Map([['CLAUDE_CODE_FORCE_TERMINAL_IMAGES', '1']]);
 
 const createReply = (text: string, surface: 'terminal' | 'desktop') =>
-  ({ plugin: 'digivice', component: 'AssistantMessage', requestId: 'reply-1', surface, props: { text, isFirstOfReply: true } }) as const;
+  ({ plugin: 'digi-theme', component: 'AssistantMessage', requestId: 'reply-1', surface, props: { text, isFirstOfReply: true } }) as const;
 
 const createToolResult = (tool: string, output: unknown, surface: 'terminal' | 'desktop' = 'terminal') =>
-  ({ plugin: 'digivice', component: 'ToolResult', requestId: 'tool-1', surface, props: { tool_use_id: 'tool-1', tool, output, isErrored: false } }) as const;
+  ({ plugin: 'digi-theme', component: 'ToolResult', requestId: 'tool-1', surface, props: { tool_use_id: 'tool-1', tool, output, isErrored: false } }) as const;
 
 const drawEngineText: Hook<'ui.render'> = (engine, event) => {
   const { Text } = engine.ui.resolve(event);
@@ -166,7 +166,7 @@ test('ToolResult_NullOutput_LeavesRowToEngine', async (engine, listen) => {
 
 test('Spinner_Sauteing_ShowsHatching', async (engine, listen) => {
   listen('ui.render', drawSpinnerWord);
-  const view = await engine.ui.mount({ plugin: 'digivice', component: 'Spinner', requestId: 'spin', surface: 'terminal', props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' } });
+  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'Spinner', requestId: 'spin', surface: 'terminal', props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' } });
   const text = await view.find({ type: 'Text' });
 
   expect(text?.text).toBe('Hatching');
@@ -175,33 +175,33 @@ test('Spinner_Sauteing_ShowsHatching', async (engine, listen) => {
 
 test('TurnDuration_Baked_ShowsCharged', async (engine, listen) => {
   listen('ui.render', drawTurnWord);
-  const view = await engine.ui.mount({ plugin: 'digivice', component: 'TurnDuration', requestId: 'turn', surface: 'terminal', props: { word: 'Baked', durationMs: 3000 } });
+  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'TurnDuration', requestId: 'turn', surface: 'terminal', props: { word: 'Baked', durationMs: 3000 } });
   const text = await view.find({ type: 'Text' });
 
   expect(text?.text).toBe('Charged');
   await view.unmount();
 });
 
-test('Command_Digivice_ToursChartsGraphsAndImages', async (engine, listen) => {
+test('Command_DigiTheme_ToursChartsGraphsAndImages', async (engine, listen) => {
   listen('env.get', () => ({ value: undefined }));
-  listen('command.register', () => ({ value: { command: 'digivice' } }));
+  listen('command.register', () => ({ value: { command: 'digi-theme' } }));
   listen('session.start', (_engine, event) => ({ cwd: event.cwd }));
   await engine.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
-  const { text = '' } = await engine.command.run({ command: 'digivice', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
-  const view = await engine.ui.mount({ plugin: 'digivice', component: 'CommandOutput', requestId: 'tour', surface: 'terminal', props: { command: 'digivice', args: '', text, isErrored: false } });
+  const { text = '' } = await engine.command.run({ command: 'digi-theme', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
+  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'CommandOutput', requestId: 'tour', surface: 'terminal', props: { command: 'digi-theme', args: '', text, isErrored: false } });
   const branch = await view.find({ type: 'Text', text: /Dark Champion/u });
 
   expect(branch?.text).toBe('        └─▶ ‹fear› Dark Champion');
   await view.unmount();
 });
 
-test('Command_DigiviceOnDesktop_DrawsChartsAsSvg', async (engine, listen) => {
+test('Command_DigiThemeOnDesktop_DrawsChartsAsSvg', async (engine, listen) => {
   listen('env.get', () => ({ value: undefined }));
-  listen('command.register', () => ({ value: { command: 'digivice' } }));
+  listen('command.register', () => ({ value: { command: 'digi-theme' } }));
   listen('session.start', (_engine, event) => ({ cwd: event.cwd }));
   await engine.session.start({ cwd: '/', surface: 'desktop', isInteractive: true });
-  const { text = '' } = await engine.command.run({ command: 'digivice', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
-  const view = await engine.ui.mount({ plugin: 'digivice', component: 'CommandOutput', requestId: 'tour', surface: 'desktop', props: { command: 'digivice', args: '', text, isErrored: false } });
+  const { text = '' } = await engine.command.run({ command: 'digi-theme', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
+  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'CommandOutput', requestId: 'tour', surface: 'desktop', props: { command: 'digi-theme', args: '', text, isErrored: false } });
 
   expect(await view.find({ type: 'Svg' })).toBeDefined();
   await view.unmount();

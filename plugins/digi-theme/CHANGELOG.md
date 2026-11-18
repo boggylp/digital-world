@@ -4,6 +4,10 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 ## [Unreleased]
 
+### Breaking
+
+- The plugin is renamed from `digivice` to `digi-theme`, and its tour command from `/digivice` to `/digi-theme`.
+
 ### Added
 
 - Replies in the Claude Code desktop app get the same headings, code frames, flow trees and links as the terminal, with charts drawn as vector graphics and local PNG images shown inline.

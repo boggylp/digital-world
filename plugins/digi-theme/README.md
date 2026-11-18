@@ -1,4 +1,4 @@
-# digivice
+# digi-theme
 
 A Digital World look for Claude Code. In the terminal and the desktop app, headings, code, charts, flow graphs and images in replies get summer-sky colors, while plain prose keeps your theme.
 
@@ -7,10 +7,10 @@ A Digital World look for Claude Code. In the terminal and the desktop app, headi
 At the prompt of a Claude Code session:
 
 ```text
-/plugin install digivice --marketplace boggylp/digital-world
+/plugin install digi-theme --marketplace boggylp/digital-world
 ```
 
-Run `/digivice` for a tour of everything it draws.
+Run `/digi-theme` for a tour of everything it draws.
 
 ## What it draws
 
@@ -53,7 +53,7 @@ The desktop app draws local PNGs up to about 95 KB and links larger ones. In the
 
 ```sh
 npm install                # at the repository root
-npm test                   # at the repository root: unit tests in tests/digivice
+npm test                   # at the repository root: unit tests in tests/digi-theme
 claude plugin test .       # mod tests against the engine
 npm run typecheck
 claude --plugin-dir .      # a session with the working copy

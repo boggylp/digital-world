@@ -1,6 +1,6 @@
 
 
-import { linkifyPaths } from '../../plugins/digivice/src/links.ts';
+import { linkifyPaths } from '../../plugins/digi-theme/src/links.ts';
 
 describe('linkifyPaths', () => {
   it.each([

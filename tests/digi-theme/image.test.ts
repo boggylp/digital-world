@@ -1,6 +1,6 @@
 
 
-import { decodeBase64Prefix, fitImage, readPngSize, resolveLocalPath } from '../../plugins/digivice/src/image.ts';
+import { decodeBase64Prefix, fitImage, readPngSize, resolveLocalPath } from '../../plugins/digi-theme/src/image.ts';
 
 const PNG_HEADER_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAJAAAAC0CAYAAAA';
 

@@ -1,4 +1,4 @@
-import { parseGraph, renderGraph } from '../../plugins/digivice/src/flow.ts';
+import { parseGraph, renderGraph } from '../../plugins/digi-theme/src/flow.ts';
 import { readText } from './read-text.ts';
 
 const drawGraph = (source: string, dialect: 'flow' | 'mermaid'): string[] => readText(renderGraph(parseGraph(source, dialect)));

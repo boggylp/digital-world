@@ -5,7 +5,7 @@ Digimon Adventure flavored mods for Claude Code. One marketplace holds both.
 | Plugin | What it does |
 | --- | --- |
 | [agent-digitama](plugins/agent-digitama/README.md) | A pixel partner above the prompt that hatches and digivolves as the context window fills |
-| [digivice](plugins/digivice/README.md) | A watercolor-sky look with charts, flow graphs, inline images and clickable paths |
+| [digi-theme](plugins/digi-theme/README.md) | A watercolor-sky look with charts, flow graphs, inline images and clickable paths |
 
 ## Install
 
@@ -13,7 +13,7 @@ At the prompt of a Claude Code session, install either or both:
 
 ```text
 /plugin install agent-digitama --marketplace boggylp/digital-world
-/plugin install digivice --marketplace boggylp/digital-world
+/plugin install digi-theme --marketplace boggylp/digital-world
 ```
 
 ## Development

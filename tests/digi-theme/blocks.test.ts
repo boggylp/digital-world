@@ -1,6 +1,6 @@
 
 
-import { splitBlocks } from '../../plugins/digivice/src/blocks.ts';
+import { splitBlocks } from '../../plugins/digi-theme/src/blocks.ts';
 
 describe('splitBlocks prose', () => {
   it('splitBlocks_ProseOnly_ReturnsOneMarkdownBlock', () => {

@@ -252,16 +252,16 @@ const renderToolResult: MatchedHook<'ui.render', { component: 'ToolResult' }> = 
 export const register: Register = listen => {
   listen('session.start', async (engine, event, proceed) => {
     const unpainted = LOOK_PROBLEMS.find(line => line.startsWith("Desktop won't paint"));
-    if (unpainted !== undefined) engine.ui.toast(`digivice: ${unpainted}`);
+    if (unpainted !== undefined) engine.ui.toast(`digi-theme: ${unpainted}`);
     await engine.theme.set(LOOK).catch(() => {});
     const started = await proceed(event);
     await engine.command
-      .register({ name: 'digivice', description: 'Show the Digital World tour: charts, graphs, images and links' })
+      .register({ name: 'digi-theme', description: 'Show the Digital World tour: charts, graphs, images and links' })
       .catch(() => {});
     return started;
   });
 
-  listen('command.run', { command: 'digivice' }, engine => ({
+  listen('command.run', { command: 'digi-theme' }, engine => ({
     text: DEMO_TEXT.replaceAll('{root}', toSlashes(engine.plugin.root))
   }));
 
@@ -274,7 +274,7 @@ export const register: Register = listen => {
   listen('ui.render', { component: 'AssistantMessage' }, renderReply);
 
   listen('ui.render', { component: 'CommandOutput' }, async (engine, event, next) => {
-    if (!DRAWN_SURFACES.has(event.surface) || event.props.command !== 'digivice' || event.props.isErrored) return next(event);
+    if (!DRAWN_SURFACES.has(event.surface) || event.props.command !== 'digi-theme' || event.props.isErrored) return next(event);
     const elements = engine.ui.resolve(event);
     return drawBlocks(engine, await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns }), splitBlocks(event.props.text));
   });

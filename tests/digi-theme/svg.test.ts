@@ -1,6 +1,6 @@
-import type { ChartLanguage } from '../../plugins/digivice/src/blocks.ts';
-import { parseChart, type Chart } from '../../plugins/digivice/src/charts.ts';
-import { createPictureSvg, escapeXml, MAX_SVG_CHARS, renderChartSvg } from '../../plugins/digivice/src/svg.ts';
+import type { ChartLanguage } from '../../plugins/digi-theme/src/blocks.ts';
+import { parseChart, type Chart } from '../../plugins/digi-theme/src/charts.ts';
+import { createPictureSvg, escapeXml, MAX_SVG_CHARS, renderChartSvg } from '../../plugins/digi-theme/src/svg.ts';
 
 const readChart = (language: ChartLanguage, source: string): Chart => {
   const chart = parseChart(language, source);
