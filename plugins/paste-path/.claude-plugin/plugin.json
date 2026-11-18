@@ -1,0 +1,8 @@
+{
+  "name": "paste-path",
+  "version": "0.1.0",
+  "description": "Paste a clipboard image into Claude Code as its saved file path, with one PowerShell 7 process",
+  "author": { "name": "Bogambe" },
+  "license": "MIT",
+  "repository": "https://github.com/boggylp/digital-world"
+}

@@ -6,6 +6,7 @@ Digimon Adventure flavored mods for Claude Code. One marketplace holds both.
 | --- | --- |
 | [agent-digitama](plugins/agent-digitama/README.md) | A pixel partner above the prompt that hatches and digivolves as the context window fills |
 | [digi-theme](plugins/digi-theme/README.md) | A watercolor-sky look with charts, flow graphs, inline images and clickable paths |
+| [paste-path](plugins/paste-path/README.md) | Paste a clipboard image as its saved file path, with one PowerShell 7 process |
 
 ## Install
 
