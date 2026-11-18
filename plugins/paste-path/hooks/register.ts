@@ -13,17 +13,17 @@ export const SAVE_CLIPBOARD = [
   '[Console]::Out.Write($path)'
 ].join('; ');
 
-export const register: Register = on => {
-  on('session.start', async ($, e, next) => {
-    const started = await next(e);
-    await $.command
+export const register: Register = listen => {
+  listen('session.start', async (engine, event, proceed) => {
+    const started = await proceed(event);
+    await engine.command
       .register({ name: COMMAND, description: 'Paste the clipboard image as its saved file path' })
       .catch(() => {});
     return started;
   });
 
-  on('command.run', { command: COMMAND }, async $ => {
-    const { exitCode, stdout, stderr } = await $.process.run([
+  listen('command.run', { command: COMMAND }, async engine => {
+    const { exitCode, stdout, stderr } = await engine.process.run([
       'pwsh',
       '-NoProfile',
       '-NonInteractive',
@@ -33,7 +33,7 @@ export const register: Register = on => {
     ]);
     if (exitCode !== 0) return { text: `paste-image: ${stderr.trim() || `pwsh exited ${exitCode}`}`, isTextDisplayOnly: true };
     if (stdout === '') return { text: 'paste-image: the clipboard holds no image or text', isTextDisplayOnly: true };
-    await $.prompt.fill({ text: stdout, mode: 'insert' });
+    await engine.prompt.fill({ text: stdout, mode: 'insert' });
     return { isTextDisplayOnly: true };
   });
 };
