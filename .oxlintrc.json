@@ -131,6 +131,7 @@
   "ignorePatterns": [
     "**/*.generated.ts",
     "**/*.generated.js",
+    "**/*.generated/**",
     "**/hooks/make-colors.js"
   ]
 }

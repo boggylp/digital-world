@@ -47,10 +47,10 @@ test('Reply_UnparseableChart_DrawsReasonUnderSource', async (engine, listen) => 
   await view.unmount();
 });
 
-test('Reply_TomlFenceInTerminal_ColorsKeysWithTerminalPalette', async (engine, listen) => {
+test('Reply_YamlFenceInTerminal_ColorsKeysWithTerminalPalette', async (engine, listen) => {
   listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```toml\n"Microsoft.DotNet.SDK.11" = { scope = "machine" }\n```', 'terminal'));
-  const runs = await view.findAll({ type: 'Text', text: /^"Microsoft\.DotNet\.SDK\.11"$/u });
+  const view = await engine.ui.mount(createReply('```yaml\napps:\n  dotnet: { scope: machine }\n```', 'terminal'));
+  const runs = await view.findAll({ type: 'Text', text: /^apps$/u });
 
   expect(runs.map(run => run.props['color'])).toContain('red');
   expect(await view.find({ type: 'Code' })).toBeUndefined();

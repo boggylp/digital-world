@@ -1,37 +1,42 @@
 import { highlightLines, isHighlightable } from '../../plugins/digi-theme/src/highlight.ts';
 
 const colorOf = (lines: ReturnType<typeof highlightLines>, text: string): string | undefined =>
-  lines.flat().find(run => run.text.includes(text))?.color;
+  lines.flat().find(run => run.text === text)?.color;
 
 describe('highlightLines', () => {
-  it('highlightLines_Toml_ColorsKeysAndStrings', () => {
-    const lines = highlightLines('"Microsoft.DotNet.SDK.11" = { scope = "machine" }', 'toml');
+  it('highlightLines_TypeScript_ColorsKeywordsNumbersStringsAndFunctions', () => {
+    const lines = highlightLines('const answer: number = await compute({ retries: 3 }, "label");', 'ts');
 
-    expect(colorOf(lines, 'Microsoft.DotNet.SDK.11')).toBe('red');
-    expect(colorOf(lines, '"machine"')).toBe('green');
+    expect([colorOf(lines, 'const'), colorOf(lines, '3'), colorOf(lines, '"label"'), colorOf(lines, 'compute')]).toStrictEqual([
+      'magenta',
+      'yellow',
+      'green',
+      'blue'
+    ]);
   });
 
-  it('highlightLines_Yaml_ColorsKeys', () => {
-    const lines = highlightLines('apps:\n  dotnet: { id: x }', 'yaml');
+  it('highlightLines_TypeScriptDeclarationAndParameter_KeepsVariablePlainAndColorsParameter', () => {
+    const lines = highlightLines('const answer: number = 1;\nfunction load(id: string) {}', 'ts');
 
-    expect(colorOf(lines, 'apps')).toBe('red');
-    expect(lines).toHaveLength(2);
+    expect([colorOf(lines, ' answer'), colorOf(lines, 'id')]).toStrictEqual([undefined, 'cyan']);
   });
 
-  it('highlightLines_TypeScript_ColorsKeywordsNumbersAndStrings', () => {
-    const lines = highlightLines('const answer = await compute(3, "label");', 'ts');
+  it('highlightLines_Yaml_ColorsKeysAndValues', () => {
+    const lines = highlightLines('apps:\n  dotnet: { scope: machine }', 'yaml');
 
-    expect(colorOf(lines, 'const')).toBe('magenta');
-    expect(colorOf(lines, '3')).toBe('yellow');
-    expect(colorOf(lines, '"label"')).toBe('green');
+    expect([colorOf(lines, 'apps'), colorOf(lines, 'scope'), colorOf(lines, 'machine')]).toStrictEqual(['red', 'red', 'green']);
   });
 
-  it('highlightLines_EscapedMarkup_KeepsSourceText', () => {
+  it('highlightLines_TomlInlineTable_TreatsQuotedAndBareKeysAlike', () => {
+    const lines = highlightLines('"quoted.key" = { scope = "machine" }', 'toml');
+
+    expect([colorOf(lines, '"quoted.key" = { scope = '), colorOf(lines, '"machine"')]).toStrictEqual([undefined, 'green']);
+  });
+
+  it('highlightLines_Markup_KeepsSourceText', () => {
     const source = 'if (a < b && c > "d") { x = \'y\'; }';
 
-    const lines = highlightLines(source, 'js');
-
-    expect(lines.flat().map(run => run.text).join('')).toBe(source);
+    expect(highlightLines(source, 'js').flat().map(run => run.text).join('')).toBe(source);
   });
 
   it('highlightLines_BlankLines_KeepsEveryLine', () => {
@@ -39,11 +44,6 @@ describe('highlightLines', () => {
   });
 
   it('isHighlightable_KnownAndUnknownLanguages_AnswersEach', () => {
-    expect([isHighlightable('powershell'), isHighlightable('dockerfile'), isHighlightable('nu'), isHighlightable('')]).toStrictEqual([
-      true,
-      true,
-      false,
-      false
-    ]);
+    expect(['ps1', 'dockerfile', 'nu', 'TOML', 'brainfuck', ''].map(language => isHighlightable(language))).toStrictEqual([true, true, true, true, false, false]);
   });
 });

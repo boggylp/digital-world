@@ -47,7 +47,7 @@ The desktop app draws charts as vector graphics 560 pixels wide, shortening long
 
 ## Code colors
 
-In the terminal, code blocks are colored with the terminal's named ANSI colors, so they follow whatever palette your terminal or its host uses. Keywords are magenta, strings green, numbers yellow, types cyan, functions blue, keys red and comments gray. The highlighter is a bundled [highlight.js](https://highlightjs.org/) 11.12 with its 37 common languages plus PowerShell and Dockerfile. A language outside that set is left to Claude Code's own highlighter.
+In the terminal, code blocks are colored with the terminal's named ANSI colors, so they follow whatever palette your terminal or its host uses. [Shiki](https://shiki.style/) reads each block with the TextMate grammars VS Code uses, and [bat](https://github.com/sharkdp/bat)'s `ansi` theme picks an ANSI color for each kind of token. 41 grammars are bundled, among them TypeScript, TSX, JavaScript, JSON, YAML, TOML, Bash, PowerShell, Nushell, Python, C#, Go, Rust, SQL, Dockerfile, CSS, HTML and Markdown. A language outside that set is left to Claude Code's own highlighter.
 
 ## Images
 
@@ -63,8 +63,9 @@ npm run typecheck
 claude --plugin-dir .      # a session with the working copy
 ```
 
-`npm run highlight:build` rebundles highlight.js into `src/highlight.generated.js`. `npm run image:build` redraws the demo egg in `assets/digitama.png`. The drawing logic in `src/` is plain TypeScript, and only `hooks/` talks to Claude Code.
+`npm run highlight:build` rebundles Shiki, its grammars and the theme into `src/highlight.generated/`. `npm run image:build` redraws the demo egg in `assets/digitama.png`. The drawing logic in `src/` is plain TypeScript, and only `hooks/` talks to Claude Code.
 
 ## Credits
 
-[highlight.js](https://github.com/highlightjs/highlight.js) is bundled under the BSD 3-Clause License, Copyright (c) 2006, Ivan Sagalaev.
+- [Shiki](https://github.com/shikijs/shiki) is bundled under the MIT License, Copyright (c) 2021 Pine Wu and (c) 2023 Anthony Fu.
+- `assets/bat-ansi.tmTheme` is bat's `ansi` theme, used under the MIT License, Copyright (c) 2018-2021 bat-developers.

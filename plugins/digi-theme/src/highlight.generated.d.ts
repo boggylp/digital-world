@@ -1,6 +1,5 @@
-declare const hljs: {
-  highlight: (code: string, options: { language: string; ignoreIllegals?: boolean }) => { value: string };
-  getLanguage: (name: string) => object | undefined;
-};
+declare const languages: ReadonlySet<string>;
 
-export default hljs;
+declare const tokenize: (code: string, lang: string) => { content: string; color?: string }[][];
+
+export { languages, tokenize };
