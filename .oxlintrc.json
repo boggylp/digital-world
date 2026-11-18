@@ -126,6 +126,14 @@
       "rules": {
         "vitest/require-top-level-describe": "error"
       }
+    },
+    {
+      "files": [
+        "plugins/*/hooks/**"
+      ],
+      "rules": {
+        "unicorn/no-array-fill-with-reference-type": "off"
+      }
     }
   ],
   "ignorePatterns": [
