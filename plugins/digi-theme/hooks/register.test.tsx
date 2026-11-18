@@ -52,7 +52,7 @@ test('Reply_YamlFenceInTerminal_ColorsKeysWithTerminalPalette', async (engine, l
   const view = await engine.ui.mount(createReply('```yaml\napps:\n  dotnet: { scope: machine }\n```', 'terminal'));
   const runs = await view.findAll({ type: 'Text', text: /^apps$/u });
 
-  expect(runs.map(run => run.props['color'])).toContain('ansi:red');
+  expect(runs.map(run => run.props['color'])).toContain('error');
   expect(await view.find({ type: 'Code' })).toBeUndefined();
   await view.unmount();
 });

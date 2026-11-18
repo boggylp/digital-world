@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-11-18
+
+### Fixed
+
+- Terminal code colors use Claude Code's theme keys, which follow the terminal palette under the ANSI themes. 0.3.2 passed a color form the engine refuses, so replies with code fell back to plain rendering.
+
 ## [0.3.2] - 2026-11-18
 
 ### Fixed
@@ -41,6 +47,7 @@ All notable changes to this plugin are documented here. The format follows [Keep
 - A watercolor summer-sky theme and backdrop in the desktop and mobile apps.
 - `/digivice` shows a tour of everything the theme draws.
 
+[0.3.3]: https://github.com/boggylp/digital-world/releases/tag/digi-theme--v0.3.3
 [0.3.2]: https://github.com/boggylp/digital-world/releases/tag/digi-theme--v0.3.2
 [0.3.1]: https://github.com/boggylp/digital-world/releases/tag/digi-theme--v0.3.1
 [0.3.0]: https://github.com/boggylp/digital-world/releases/tag/digi-theme--v0.3.0

@@ -47,7 +47,7 @@ The desktop app draws charts as vector graphics 560 pixels wide, shortening long
 
 ## Code colors
 
-In the terminal, code blocks are colored with the terminal's named ANSI colors, so they follow whatever palette your terminal or its host uses. [Shiki](https://shiki.style/) reads each block with the TextMate grammars VS Code uses, and [bat](https://github.com/sharkdp/bat)'s `ansi` theme picks an ANSI color for each kind of token. 41 grammars are bundled, among them TypeScript, TSX, JavaScript, JSON, YAML, TOML, Bash, PowerShell, Nushell, Python, C#, Go, Rust, SQL, Dockerfile, CSS, HTML and Markdown. A language outside that set is left to Claude Code's own highlighter.
+In the terminal, code blocks are colored through Claude Code's theme keys. Under the `dark-ansi` or `light-ansi` theme those keys are your terminal's own ANSI colors, so code follows whatever palette your terminal or its host uses; under other themes they take that theme's colors. [Shiki](https://shiki.style/) reads each block with the TextMate grammars VS Code uses, and [bat](https://github.com/sharkdp/bat)'s `ansi` theme picks an ANSI color for each kind of token. 41 grammars are bundled, among them TypeScript, TSX, JavaScript, JSON, YAML, TOML, Bash, PowerShell, Nushell, Python, C#, Go, Rust, SQL, Dockerfile, CSS, HTML and Markdown. A language outside that set is left to Claude Code's own highlighter.
 
 ## Images
 
