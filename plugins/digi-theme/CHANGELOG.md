@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-20
+
+### Fixed
+
+- The transcript no longer says the `classic.Notification` hook was skipped. Claude Code hands some notifications past user plugins, so the partner now pulses amber from question and permission requests alone.
+
 ## [0.4.0] - 2026-11-19
 
 ### Breaking

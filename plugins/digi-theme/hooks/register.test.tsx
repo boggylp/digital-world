@@ -127,12 +127,9 @@ test('band_TurnComplete_Hops', async (engine, hook) => {
 test('band_PermissionPrompt_PulsesAmber', async (engine, hook) => {
   const clock = stubEngine(hook, () => 12);
   mock.store(hook);
-  hook('classic.Notification', () => ({}));
+  hook('classic.PermissionRequest', () => ({}));
   await hatchAgumon(engine, clock);
-  await engine.classic.Notification({
-    message: 'Claude needs permission',
-    notification_type: 'permission_prompt'
-  });
+  await engine.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'ls' } });
 
   expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'angry'));
 });

@@ -1,6 +1,6 @@
 {
   "name": "digi-theme",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A Digital World for Claude Code: a pixel Digimon partner above the prompt that digivolves as the context window fills, and a watercolor-sky look with charts, flow graphs, inline images and clickable paths",
   "author": { "name": "Bogambe" },
   "license": "MIT",

@@ -2,7 +2,6 @@ import type { EngineInterface, MatchedHook, On, Register, RenderElement } from '
 
 import { BEAT_TICKS, MS_PER_SECOND, readPartnerPixels, TICKS_PER_SECOND } from '../src/animation.ts';
 import {
-  ALERT_NOTIFICATIONS,
   callPartner,
   createPartner,
   DEFAULT_THRESHOLDS,
@@ -236,13 +235,6 @@ const registerReactionHooks = (hook: On): void => {
     const result = await proceed(event);
     if (!result?.decision) partner = callPartner(partner, true);
     return result;
-  });
-
-  hook('classic.Notification', (engine, event, proceed) => {
-    if (ALERT_NOTIFICATIONS.has(event.notification_type)) {
-      partner = callPartner(partner, true);
-    }
-    return proceed(event);
   });
 };
 
