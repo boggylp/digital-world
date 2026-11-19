@@ -16,7 +16,7 @@ import { UP_SPRITES } from '../src/up-sprites.generated.ts';
 const UNEXPIRED_REACTION_TICK = 1000;
 
 export const BAND = {
-  plugin: 'agent-digitama',
+  plugin: 'digi-theme',
   component: 'AbovePrompt',
   requestId: 'band',
   surface: 'terminal',

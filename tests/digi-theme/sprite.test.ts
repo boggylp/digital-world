@@ -1,6 +1,6 @@
 
 
-import { LINES } from '../../plugins/agent-digitama/src/roster.ts';
+import { LINES } from '../../plugins/digi-theme/src/roster.ts';
 import {
   DEFAULT_COLOR,
   FRAMES,
@@ -12,9 +12,9 @@ import {
   readPixels,
   TRANSPARENT,
   type Sheet
-} from '../../plugins/agent-digitama/src/sprite.ts';
-import { SHEETS } from '../../plugins/agent-digitama/src/sprites.generated.ts';
-import { UP_SPRITES } from '../../plugins/agent-digitama/src/up-sprites.generated.ts';
+} from '../../plugins/digi-theme/src/sprite.ts';
+import { SHEETS } from '../../plugins/digi-theme/src/sprites.generated.ts';
+import { UP_SPRITES } from '../../plugins/digi-theme/src/up-sprites.generated.ts';
 
 const RED = 0xff_00_00;
 const BLUE = 0x00_00_ff;

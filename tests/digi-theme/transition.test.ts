@@ -1,9 +1,9 @@
 
 
-import { readStillPixels } from '../../plugins/agent-digitama/src/animation.ts';
-import { placeDotPixels, readPixels, type Sheet } from '../../plugins/agent-digitama/src/sprite.ts';
-import { SHEETS } from '../../plugins/agent-digitama/src/sprites.generated.ts';
-import { createDigivolution, createHatching, findScenePixels } from '../../plugins/agent-digitama/src/transition.ts';
+import { readStillPixels } from '../../plugins/digi-theme/src/animation.ts';
+import { placeDotPixels, readPixels, type Sheet } from '../../plugins/digi-theme/src/sprite.ts';
+import { SHEETS } from '../../plugins/digi-theme/src/sprites.generated.ts';
+import { createDigivolution, createHatching, findScenePixels } from '../../plugins/digi-theme/src/transition.ts';
 
 const GOLD_SPARKLE = 0xff_e0_66;
 

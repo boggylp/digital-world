@@ -5,12 +5,18 @@
   "scripts": {
     "image:build": "node scripts/build-demo-image.ts",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.json",
-    "highlight:build": "node scripts/build-highlight.ts"
+    "highlight:build": "node scripts/build-highlight.ts",
+    "sprites:fetch": "node scripts/fetch-sprites.ts",
+    "sprites:build": "node scripts/build-sprites.ts && node scripts/build-up-sprites.ts && oxfmt --write src/sprites.generated.ts src/up-sprites.generated.ts src/up-images.generated.ts src/up-images",
+    "format": "oxfmt --write ."
   },
   "devDependencies": {
     "@types/plist": "^3.0.5",
+    "csv-parse": "7.0.3",
     "esbuild": "0.28.2",
+    "oxfmt": "0.74.0",
     "plist": "^3.1.0",
+    "sharp": "0.35.5",
     "shiki": "^4.6.0"
   }
 }

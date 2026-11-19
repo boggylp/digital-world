@@ -1,292 +1,293 @@
-import type { EngineInterface, ElementTable, MatchedHook, Register, RenderChildren, RenderElement, RenderSurface } from 'claude-code';
+import type { EngineInterface, MatchedHook, On, Register, RenderElement } from 'claude-code';
 
-import { isPlainProse, splitBlocks, type Block } from '../src/blocks.ts';
-import { describeChart, parseChart, renderChart, type Chart, type Line } from '../src/charts.ts';
-import { parseGraph, renderGraph } from '../src/flow.ts';
-import { highlightLines, isHighlightable } from '../src/highlight.ts';
-import { decodeBase64Prefix, fitImage, isRemote, MAX_IMAGE_BASE64, PNG_HEADER_BYTES, readPngSize, resolveLocalPath, type Size } from '../src/image.ts';
-import { createFileHref, linkifyPaths } from '../src/links.ts';
-import { VIBES } from '../src/palette.ts';
-import { toSlashes } from '../src/paths.ts';
-import { DEMO_TEXT } from '../src/demo.ts';
-import { createPictureSvg, MAX_SVG_CHARS, renderChartSvg } from '../src/svg.ts';
-import { pickPastWord, pickPresentWord } from '../src/words.ts';
-import { LOOK, LOOK_PROBLEMS, SCENE } from './look.ts';
+import { BEAT_TICKS, MS_PER_SECOND, readPartnerPixels, TICKS_PER_SECOND } from '../src/animation.ts';
+import {
+  ALERT_NOTIFICATIONS,
+  callPartner,
+  createPartner,
+  DEFAULT_THRESHOLDS,
+  hatchPartner,
+  measurePartner,
+  reactPartner,
+  readThresholds,
+  QUESTION_TOOLS,
+  REFUSED,
+  type Partner,
+  type Thresholds
+} from '../src/partner.ts';
+import { DEFAULT_LINE, findLine, LINES, type Line } from '../src/roster.ts';
+import {
+  createImageSource,
+  encodeImagePixels,
+  encodePixels,
+  encodeSvgPixels,
+  type Pixel
+} from '../src/sprite.ts';
+import { drawCellCorner, drawSvgCorner, fitsCellCorner, placeCorner, RASTER_KEY } from './corner.tsx';
+import { createTransition, findScenePixels, type Scene } from '../src/transition.ts';
+import { LOOK } from './look.ts';
+import { registerLook, TOUR_COMMAND, UNPAINTED } from './restyle.tsx';
 
-type Terminal = ElementTable<'terminal'>;
-type Shared = Pick<Terminal, 'Box' | 'Text' | 'Link' | 'Code' | 'Markdown'>;
-type Canvas = { kind: 'image'; Image: Terminal['Image'] } | { kind: 'svg'; Svg: ElementTable<'desktop'>['Svg'] };
-type Context = { elements: Shared; canvas: Canvas; columns: number; home: string; showsImages: boolean };
+const STORE_KEY = 'partner';
+const MEASURE_EVERY_TICKS = 20;
+const PARTNER_LIST = LINES.map((line) => line.partner).join(', ');
 
-const HEADING_MARKS = ['✦ ', '◆ ', '◇ ', '· ', '· ', '· '];
-const HEADING_COLORS = [VIBES.sun, VIBES.sky, VIBES.leaf, VIBES.teal, VIBES.lavender, VIBES.blossom];
-const IMAGE_TERMINALS = new Set(['ghostty', 'kitty', 'iTerm.app', 'WezTerm']);
-const DRAWN_SURFACES = new Set<RenderSurface>(['terminal', 'desktop']);
-const SCENE_NAME = 'digital-world';
-const MAX_CACHED_IMAGES = 32;
-const FRAME_WIDTH = 4;
-const MIN_COLUMNS = 24;
-const DEFAULT_COLUMNS = 80;
-const VIEWPORT_MARGIN = 4;
-const REPLY_GUTTER = 2;
+let partner: Partner = createPartner(DEFAULT_LINE);
+let tick = 0;
+let percent = 0;
+let bandId: string | null = null;
+let sentCells: string | null = null;
+let sentSvg: string | null = null;
+let ticker: { cancel: () => void } | null = null;
+let scene: Scene | null = null;
+let sceneStart = 0;
+let sceneTarget: Partner | null = null;
+let isTicking = false;
+let isErrorLogged = false;
+let isImage = false;
+let hasDrawnImage = false;
+let thresholds: Thresholds | null = DEFAULT_THRESHOLDS;
+const encodedScenes = new WeakMap<Pixel[][], string>();
 
-type Picture = { base64: string; size: Size };
+const countBeats = (): number => Math.floor(tick / BEAT_TICKS);
 
-const readHome = async (engine: EngineInterface): Promise<string> => {
-  const home = (await engine.env.get('USERPROFILE')) ?? (await engine.env.get('HOME')) ?? '';
-  return toSlashes(home);
+const startScene = (source: Partner, target: Partner): void => {
+  scene = createTransition(source, target, isImage);
+  sceneStart = tick;
+  sceneTarget = target;
+};
+
+const changePartner = (changed: Partner): void => {
+  if (changed.stage !== partner.stage && scene === null) startScene(partner, changed);
+  partner = changed;
+};
+
+const advanceScene = (): void => {
+  if (scene === null || findScenePixels(scene, tick - sceneStart) !== null) return;
+  const reached = sceneTarget;
+  scene = null;
+  sceneTarget = null;
+  if (reached !== null && reached.stage !== partner.stage) startScene(reached, partner);
 };
 
 const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
-  const [program, kitty, forced, multiplexer] = await Promise.all([
+  const [terminal, kitty, forced] = await Promise.all([
     engine.env.get('TERM_PROGRAM'),
     engine.env.get('KITTY_WINDOW_ID'),
-    engine.env.get('CLAUDE_CODE_FORCE_TERMINAL_IMAGES'),
-    engine.env.get('TMUX')
+    engine.env.get('CLAUDE_CODE_FORCE_TERMINAL_IMAGES')
   ]);
-  if (forced === '1') return true;
-  return !multiplexer && (Boolean(kitty) || IMAGE_TERMINALS.has(program ?? ''));
-};
-
-const drawLines = (elements: Shared, lines: readonly Line[], wrap: 'truncate' | 'wrap' = 'truncate'): RenderElement => (
-  <elements.Box flexDirection="column">
-    {lines.map(line => (
-      <elements.Text wrap={wrap}>
-        {line
-          .filter(run => run.text)
-          .map(run => (
-            <elements.Text {...(run.color ? { color: run.color } : {})} dimColor={run.dim === true} bold={run.bold === true}>
-              {run.text}
-            </elements.Text>
-          ))}
-      </elements.Text>
-    ))}
-  </elements.Box>
-);
-
-const drawFrame = (elements: Shared, color: string, children: RenderChildren): RenderElement => (
-  <elements.Box flexDirection="column" borderStyle="round" borderColor={color} paddingX={1}>
-    {children}
-  </elements.Box>
-);
-
-const drawCode = ({ elements, canvas }: Context, language: string, source: string): RenderElement =>
-  drawFrame(elements, VIBES.mountain, [
-    language ? <elements.Text color={VIBES.sun} bold>{language}</elements.Text> : null,
-    canvas.kind === 'image' && isHighlightable(language) ? (
-      drawLines(elements, highlightLines(source, language), 'wrap')
-    ) : (
-      <elements.Code source={source} {...(language ? { language } : {})} />
-    )
-  ]);
-
-const drawLinkRow = (elements: Shared, glyph: string, href: string, label: string, note?: string): RenderElement => (
-  <elements.Text>
-    <elements.Text color={VIBES.sky}>{glyph} </elements.Text>
-    <elements.Link href={href} label={label || href} />
-    {note ? <elements.Text dimColor> {note}</elements.Text> : null}
-  </elements.Text>
-);
-
-const readPicture = (base64: string, maxChars: number): Picture | null => {
-  const size = readPngSize(decodeBase64Prefix(base64, PNG_HEADER_BYTES));
-  return size && base64.length <= maxChars ? { base64, size } : null;
-};
-
-const readPictureLimit = (canvas: Canvas): number => (canvas.kind === 'svg' ? MAX_SVG_CHARS : MAX_IMAGE_BASE64);
-
-const drawPicture = (context: Context, picture: Picture, alt: string): RenderElement | null => {
-  const { canvas } = context;
-  if (canvas.kind === 'svg') {
-    const source = createPictureSvg(picture.base64, picture.size);
-    return source === null ? null : <canvas.Svg source={source} alt={alt || 'image'} />;
-  }
-  const box = fitImage(picture.size, context.columns);
-  return <canvas.Image source={{ png: picture.base64 }} columns={box.columns} rows={box.rows} alt={alt || ' '} />;
-};
-
-const drawChart = (context: Context, chart: Chart): RenderElement => {
-  const { canvas, elements } = context;
-  const source = canvas.kind === 'svg' ? renderChartSvg(chart) : null;
-  const drawing = canvas.kind === 'svg' && source !== null ? <canvas.Svg source={source} alt={describeChart(chart)} /> : drawLines(elements, renderChart(chart, context.columns - FRAME_WIDTH));
-  return drawFrame(elements, VIBES.sky, drawing);
-};
-
-const pictures = new Map<string, Promise<Picture | null>>();
-
-const readPictureFile = async (engine: EngineInterface, path: string, maxChars: number): Promise<Picture | null> => {
-  const file = await engine.fs.read(path, { as: 'bytes' }).catch(() => null);
-  return file ? readPicture(file.base64, maxChars) : null;
-};
-
-const loadPicture = async (engine: EngineInterface, path: string, maxChars: number): Promise<Picture | null> => {
-  const stat = await engine.fs.stat(path).catch(() => null);
-  if (!stat) return null;
-  const key = `${path}\0${stat.mtimeMs}\0${maxChars}`;
-  const cached = pictures.get(key) ?? readPictureFile(engine, path, maxChars);
-  pictures.delete(key);
-  pictures.set(key, cached);
-  if (pictures.size > MAX_CACHED_IMAGES) pictures.delete(pictures.keys().next().value ?? key);
-  return cached;
-};
-
-const drawImage = async (engine: EngineInterface, context: Context, alt: string, source: string): Promise<RenderElement> => {
-  const { elements, home } = context;
-  if (isRemote(source)) return drawLinkRow(elements, '▣', source, alt);
-  const path = resolveLocalPath(source, home);
-  const href = createFileHref(path, home);
-  if (!context.showsImages || !path.toLowerCase().endsWith('.png')) return drawLinkRow(elements, '▣', href, alt);
-  const picture = await loadPicture(engine, path, readPictureLimit(context.canvas));
-  const drawn = picture ? drawPicture(context, picture, alt) : null;
-  if (!drawn) return drawLinkRow(elements, '▣', href, alt, '(not shown)');
   return (
-    <elements.Box flexDirection="column">
-      {drawn}
-      {drawLinkRow(elements, '▣', href, alt || path)}
-    </elements.Box>
+    forced === '1' || Boolean(kitty) || ['ghostty', 'kitty', 'iTerm.app'].includes(terminal ?? '')
   );
 };
 
-const drawBlock = (engine: EngineInterface, context: Context, block: Block): RenderElement | Promise<RenderElement> => {
-  const { elements, home } = context;
-  switch (block.kind) {
-    case 'markdown': {
-      return <elements.Markdown text={linkifyPaths(block.text, home)} />;
-    }
-    case 'heading': {
-      return (
-        <elements.Text bold color={HEADING_COLORS[block.level - 1] ?? VIBES.sun}>
-          {HEADING_MARKS[block.level - 1]}
-          {block.text.replaceAll(/\*\*|__|`/gu, '')}
-        </elements.Text>
-      );
-    }
-    case 'code': {
-      return drawCode(context, block.language, block.source);
-    }
-    case 'chart': {
-      const chart = parseChart(block.language, block.source);
-      if ('error' in chart) return drawCode(context, block.language, `${block.source}\n# ${chart.error}`);
-      return drawChart(context, chart);
-    }
-    case 'flow': {
-      const graph = parseGraph(block.source, block.dialect);
-      if (graph.nodes.size === 0) return drawCode(context, block.dialect, block.source);
-      return drawFrame(elements, VIBES.leaf, drawLines(elements, renderGraph(graph)));
-    }
-    case 'image': {
-      return drawImage(engine, context, block.alt, block.source);
-    }
+const readSavedLine = async (engine: EngineInterface): Promise<Line> => {
+  const saved: unknown = await engine.store.get(STORE_KEY).catch(() => null);
+  return (typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE;
+};
+
+const hatchSavedPartner = async (engine: EngineInterface): Promise<void> => {
+  partner = createPartner(await readSavedLine(engine));
+  scene = null;
+  sceneTarget = null;
+  percent = 0;
+  sentCells = null;
+  engine.ui.invalidate('ui.render');
+};
+
+const encodeScenePixels = (pixels: Pixel[][]): string => {
+  const cached = encodedScenes.get(pixels);
+  if (cached !== undefined) return cached;
+  const cells = isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
+  encodedScenes.set(pixels, cells);
+  return cells;
+};
+
+const readScenePixels = (): Pixel[][] | null =>
+  scene === null ? null : findScenePixels(scene, tick - sceneStart);
+
+const readFramePixels = (): Pixel[][] => readScenePixels() ?? readPartnerPixels(partner, tick, isImage);
+
+const encodeCells = (): string => {
+  const scenePixels = readScenePixels();
+  if (scenePixels !== null) return encodeScenePixels(scenePixels);
+  const pixels = readPartnerPixels(partner, tick, isImage);
+  return isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
+};
+
+const measureContext = async (engine: EngineInterface): Promise<void> => {
+  const { context } = await engine.session.usage();
+  percent = context.percent ?? percent;
+  changePartner(measurePartner(partner, percent, thresholds ?? DEFAULT_THRESHOLDS));
+};
+
+const blitFrame = async (engine: EngineInterface): Promise<void> => {
+  if (bandId === null) return;
+  const cells = encodeCells();
+  if (cells === sentCells) return;
+  sentCells = cells;
+  const address = { requestId: bandId, key: RASTER_KEY };
+  const result = await engine.ui.blit(
+    isImage ? { ...address, source: createImageSource(cells) } : { ...address, cells }
+  );
+  hasDrawnImage ||= isImage && result.deny === undefined;
+  if (result.deny === undefined) return;
+  if (isImage && !hasDrawnImage) {
+    isImage = false;
+    scene = null;
+    sceneTarget = null;
+  }
+  bandId = null;
+  sentCells = null;
+  engine.ui.invalidate('ui.render');
+};
+
+const redrawSvg = (engine: EngineInterface): void => {
+  if (sentSvg === null || encodeSvgPixels(readFramePixels()) === sentSvg) return;
+  engine.ui.invalidate('ui.render');
+};
+
+const runTick = async (engine: EngineInterface): Promise<void> => {
+  if (isTicking) return;
+  isTicking = true;
+  try {
+    tick += 1;
+    if (tick % MEASURE_EVERY_TICKS === 0) await measureContext(engine);
+    advanceScene();
+    await blitFrame(engine);
+    redrawSvg(engine);
+  } catch (error) {
+    if (!isErrorLogged) engine.ui.log(`digi-theme: ${String(error)}`);
+    isErrorLogged = true;
+  } finally {
+    isTicking = false;
   }
 };
 
-const drawBlocks = async (engine: EngineInterface, context: Context, blocks: readonly Block[]): Promise<RenderElement> => {
-  const drawn = await Promise.all(blocks.map(block => drawBlock(engine, context, block)));
-  return (
-    <context.elements.Box flexDirection="column" rowGap={1} flexGrow={1}>
-      {drawn}
-    </context.elements.Box>
-  );
-};
-
-const cache: { home?: Promise<string>; showsImages?: Promise<boolean> } = {};
-
-const readCachedHome = (engine: EngineInterface): Promise<string> => (cache.home ??= readHome(engine));
-
-type Drawn = { surface: RenderSurface; table: ElementTable; viewportColumns: number | undefined };
-
-const pickCanvas = (surface: RenderSurface, table: ElementTable): Canvas => {
-  if (surface !== 'terminal' && 'Svg' in table) return { kind: 'svg', Svg: table.Svg };
-  if ('Image' in table) return { kind: 'image', Image: table.Image };
-  throw new Error(`No picture element on ${surface}`);
-};
-
-const createContext = async (engine: EngineInterface, { surface, table, viewportColumns }: Drawn): Promise<Context> => {
-  const canvas = pickCanvas(surface, table);
-  return {
-    elements: table,
-    canvas,
-    columns: Math.max(MIN_COLUMNS, (viewportColumns ?? DEFAULT_COLUMNS) - VIEWPORT_MARGIN),
-    home: await readCachedHome(engine),
-    showsImages: canvas.kind === 'svg' || (await (cache.showsImages ??= readImageSupport(engine).catch(() => false)))
-  };
-};
-
-const renderReply: MatchedHook<'ui.render', { component: 'AssistantMessage' }> = async (engine, event, next) => {
-  if (!DRAWN_SURFACES.has(event.surface) || event.props.isSummary) return next(event);
-  const blocks = splitBlocks(event.props.text);
-  if (isPlainProse(blocks)) {
-    const text = linkifyPaths(event.props.text, await readCachedHome(engine));
-    return text === event.props.text ? next(event) : next({ ...event, props: { ...event.props, text } });
-  }
-  const elements = engine.ui.resolve(event);
-  const context = await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns });
-  return (
-    <elements.Box flexDirection="row">
-      <elements.Text color={VIBES.sun}>{event.props.isFirstOfReply ? '◉ ' : '  '}</elements.Text>
-      {await drawBlocks(engine, { ...context, columns: context.columns - REPLY_GUTTER }, blocks)}
-    </elements.Box>
-  );
-};
-
-const renderToolResult: MatchedHook<'ui.render', { component: 'ToolResult' }> = async (engine, event, next) => {
-  if (!DRAWN_SURFACES.has(event.surface) || event.props.isErrored || event.props.isExpanded || typeof event.props.output !== 'object' || event.props.output === null) return next(event);
-  const output = event.props.output as { type?: unknown; filePath?: unknown; file?: { base64?: unknown; type?: unknown } };
-  const elements = engine.ui.resolve(event);
-  const context = await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns });
-  if ((event.props.tool === 'Write' || event.props.tool === 'Edit') && typeof output.filePath === 'string') {
-    return (
-      <elements.Box flexDirection="column">
-        {await next(event)}
-        {drawLinkRow(elements, '  ↗', createFileHref(output.filePath, context.home), output.filePath)}
-      </elements.Box>
-    );
-  }
-  const isPngRead = event.props.tool === 'Read' && output.type === 'image' && output.file?.type === 'image/png' && typeof output.file.base64 === 'string';
-  const picture = isPngRead && context.showsImages ? readPicture(String(output.file?.base64), readPictureLimit(context.canvas)) : null;
-  const drawn = picture ? drawPicture(context, picture, 'image preview') : null;
-  if (!drawn) return next(event);
-  return (
-    <elements.Box flexDirection="column">
-      {await next(event)}
-      {drawn}
-    </elements.Box>
-  );
-};
-
-export const register: Register = listen => {
-  listen('session.start', async (engine, event, proceed) => {
-    const unpainted = LOOK_PROBLEMS.find(line => line.startsWith("Desktop won't paint"));
-    if (unpainted !== undefined) engine.ui.toast(`digi-theme: ${unpainted}`);
+const registerLifecycleHooks = (hook: On): void => {
+  // The engine refuses a second unmatched session.start, so this one also starts the look.
+  hook('session.start', async (engine, event, proceed) => {
+    isImage = event.surface !== 'terminal' || (await readImageSupport(engine));
+    hasDrawnImage = false;
+    await hatchSavedPartner(engine);
+    await engine.command.register({
+      name: 'agent-digitama',
+      description: 'Choose the Digimon partner that hatches in new sessions',
+      argumentHint: PARTNER_LIST
+    });
+    ticker?.cancel();
+    ticker = engine.clock.every(MS_PER_SECOND / TICKS_PER_SECOND, () => runTick(engine));
+    if (UNPAINTED !== undefined) engine.ui.toast(`digi-theme: ${UNPAINTED}`);
     await engine.theme.set(LOOK).catch(() => {});
     const started = await proceed(event);
-    await engine.command
-      .register({ name: 'digi-theme', description: 'Show the Digital World tour: charts, graphs, images and links' })
-      .catch(() => {});
+    await engine.command.register(TOUR_COMMAND).catch(() => {});
     return started;
   });
 
-  listen('command.run', { command: 'digi-theme' }, engine => ({
-    text: DEMO_TEXT.replaceAll('{root}', toSlashes(engine.plugin.root))
-  }));
-
-  listen('ui.render', { component: 'Backdrop' }, (engine, event, next) => {
-    if ((event.surface !== 'desktop' && event.surface !== 'mobile') || event.props.scene !== SCENE_NAME) return next(event);
-    const { Svg } = engine.ui.resolve(event);
-    return <Svg source={SCENE} alt="A watercolor summer sky over misty mountains and green treetops" />;
+  hook('session.end', async (engine, event, proceed) => {
+    if (event.reason === 'clear') await hatchSavedPartner(engine);
+    return proceed(event);
   });
 
-  listen('ui.render', { component: 'AssistantMessage' }, renderReply);
-
-  listen('ui.render', { component: 'CommandOutput' }, async (engine, event, next) => {
-    if (!DRAWN_SURFACES.has(event.surface) || event.props.command !== 'digi-theme' || event.props.isErrored) return next(event);
-    const elements = engine.ui.resolve(event);
-    return drawBlocks(engine, await createContext(engine, { surface: event.surface, table: elements, viewportColumns: event.viewport?.columns }), splitBlocks(event.props.text));
+  hook('command.run', { command: 'agent-digitama' }, async (engine, event) => {
+    const wanted = event.args.trim();
+    if (wanted === '') {
+      const { partner: current } = await readSavedLine(engine);
+      return { text: `Partner: ${current}. Choose one of: ${PARTNER_LIST}.` };
+    }
+    const line = findLine(wanted);
+    if (line === null) {
+      return { text: `No partner named ${wanted}. Choose one of: ${PARTNER_LIST}.` };
+    }
+    await engine.store.set(STORE_KEY, line.partner);
+    return { text: `Saved ${line.partner}. New sessions hatch its Digitama.` };
   });
 
-  listen('ui.render', { component: 'ToolResult' }, renderToolResult);
+  hook('prompt.submit', (engine, event, proceed) => {
+    if (thresholds === null) engine.ui.toast('digi-theme: stage percentages must be 1 to 100 and rise from Baby II to Mega, so the defaults apply.');
+    changePartner(hatchPartner(partner, percent, thresholds ?? DEFAULT_THRESHOLDS));
+    return proceed(event);
+  });
+};
 
-  listen('ui.render', { component: 'Spinner' }, (_engine, event, next) => next({ ...event, props: { ...event.props, word: pickPresentWord(event.props.word) } }));
+const registerReactionHooks = (hook: On): void => {
+  hook('tool.call', async (engine, event, proceed) => {
+    if (event.agentId) return proceed(event);
+    if (QUESTION_TOOLS.has(String(event.tool))) partner = callPartner(partner, true);
+    const result = await proceed(event);
+    const isRefused = REFUSED.test(String(result.text ?? ''));
+    const isFailure = result.isError === true && !proceed.signal.aborted && !isRefused;
+    const answered = callPartner(partner, false);
+    partner = isFailure ? reactPartner(answered, 'hurt', countBeats()) : answered;
+    return result;
+  });
 
-  listen('ui.render', { component: 'TurnDuration' }, (_engine, event, next) => next({ ...event, props: { ...event.props, word: pickPastWord(event.props.word) } }));
+  hook('turn.complete', async (engine, event, proceed) => {
+    if (!event.agentId) {
+      const answered = callPartner(partner, false);
+      partner =
+        event.reason === 'answer' ? reactPartner(answered, 'happy', countBeats()) : answered;
+      await measureContext(engine);
+    }
+    return proceed(event);
+  });
+
+  hook('classic.PermissionRequest', async (engine, event, proceed) => {
+    const result = await proceed(event);
+    if (!result?.decision) partner = callPartner(partner, true);
+    return result;
+  });
+
+  hook('classic.Notification', (engine, event, proceed) => {
+    if (ALERT_NOTIFICATIONS.has(event.notification_type)) {
+      partner = callPartner(partner, true);
+    }
+    return proceed(event);
+  });
+};
+
+type BandEvent = Parameters<MatchedHook<'ui.render', { component: 'AbovePrompt' }>>[1];
+
+const readForm = (): string => partner.line.forms[partner.stage];
+
+const drawTerminalCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {
+  sentSvg = null;
+  if (event.surface !== 'terminal' || event.props.hasSurvey || !fitsCellCorner(isImage, event.props)) {
+    bandId = null;
+    return null;
+  }
+  bandId = event.requestId;
+  const cells = encodeCells();
+  sentCells = isImage ? null : cells;
+  return drawCellCorner(engine.ui.resolve(event), { cells, isImage, alt: readForm() });
+};
+
+const drawDesktopCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {
+  bandId = null;
+  if (event.surface !== 'desktop' || event.props.hasSurvey || event.props.isCollapsed) {
+    sentSvg = null;
+    return null;
+  }
+  const pixels = readFramePixels();
+  sentSvg = encodeSvgPixels(pixels);
+  return drawSvgCorner(engine.ui.resolve(event), { pixels, source: sentSvg, alt: readForm() });
+};
+
+const registerBandHook = (hook: On): void => {
+  hook('ui.render', { component: 'AbovePrompt' }, async (engine, event, proceed) => {
+    const theirs = await proceed(event);
+    const corner =
+      event.surface === 'terminal'
+        ? drawTerminalCorner(engine, event)
+        : drawDesktopCorner(engine, event);
+    return corner === null ? theirs : placeCorner(engine.ui.resolve(event), theirs, corner);
+  });
+};
+
+export const register: Register = (hook, options) => {
+  thresholds = readThresholds(options);
+  registerLifecycleHooks(hook);
+  registerReactionHooks(hook);
+  registerBandHook(hook);
+  registerLook(hook);
 };

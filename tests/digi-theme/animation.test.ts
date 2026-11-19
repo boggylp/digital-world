@@ -1,11 +1,11 @@
 
 
-import { readPartnerPixels, readStillPixels } from '../../plugins/agent-digitama/src/animation.ts';
-import { callPartner, createPartner, reactPartner, type Reaction } from '../../plugins/agent-digitama/src/partner.ts';
-import { findLine } from '../../plugins/agent-digitama/src/roster.ts';
-import { placeDotPixels, readAnimationPixels, readPixels } from '../../plugins/agent-digitama/src/sprite.ts';
-import { SHEETS } from '../../plugins/agent-digitama/src/sprites.generated.ts';
-import { UP_SPRITES } from '../../plugins/agent-digitama/src/up-sprites.generated.ts';
+import { readPartnerPixels, readStillPixels } from '../../plugins/digi-theme/src/animation.ts';
+import { callPartner, createPartner, reactPartner, type Reaction } from '../../plugins/digi-theme/src/partner.ts';
+import { findLine } from '../../plugins/digi-theme/src/roster.ts';
+import { placeDotPixels, readAnimationPixels, readPixels } from '../../plugins/digi-theme/src/sprite.ts';
+import { SHEETS } from '../../plugins/digi-theme/src/sprites.generated.ts';
+import { UP_SPRITES } from '../../plugins/digi-theme/src/up-sprites.generated.ts';
 
 const createGabumon = () => {
   const line = findLine('Gabumon');

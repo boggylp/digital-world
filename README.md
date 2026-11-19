@@ -1,19 +1,17 @@
 # digital-world
 
-Digimon Adventure flavored mods for Claude Code. One marketplace holds both.
+Digimon Adventure flavored mods for Claude Code. One marketplace holds them.
 
 | Plugin | What it does |
 | --- | --- |
-| [agent-digitama](plugins/agent-digitama/README.md) | A pixel partner above the prompt that hatches and digivolves as the context window fills |
-| [digi-theme](plugins/digi-theme/README.md) | A watercolor-sky look with charts, flow graphs, inline images and clickable paths |
+| [digi-theme](plugins/digi-theme/README.md) | A pixel partner above the prompt that hatches and digivolves as the context window fills, and a watercolor-sky look with charts, flow graphs, inline images and clickable paths |
 | [paste-path](plugins/paste-path/README.md) | Paste a clipboard image as its saved file path, with one PowerShell 7 process |
 
 ## Install
 
-At the prompt of a Claude Code session, install either or both:
+At the prompt of a Claude Code session:
 
 ```text
-/plugin install agent-digitama --marketplace boggylp/digital-world
 /plugin install digi-theme --marketplace boggylp/digital-world
 ```
 
@@ -39,4 +37,4 @@ To release a plugin:
 
 ## License
 
-The code is [MIT](LICENSE). It does not cover the sprites or the Digimon characters, whose owners [CREDITS.md](plugins/agent-digitama/CREDITS.md) names.
+The code is [MIT](LICENSE). It does not cover the sprites or the Digimon characters, whose owners [CREDITS.md](plugins/digi-theme/CREDITS.md) names.

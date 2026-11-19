@@ -1,226 +1,192 @@
-import type { Hook } from 'claude-code';
-import { expect, test } from 'claude-code/testing';
+import { expect, mock, test } from 'claude-code/testing';
+import {
+  BAND,
+  AFTER_SCENES_MS,
+  stubEngine,
+  startSession,
+  runCommand,
+  encodePartner,
+  encodeUpFrame,
+  encodeEgg,
+  hatchAgumon,
+  readBandCells
+} from './fixtures.tsx';
 
-const DOT_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-const FORCED_IMAGE_ENV = new Map([['CLAUDE_CODE_FORCE_TERMINAL_IMAGES', '1']]);
+test('agent-digitama_NoSavedPartner_ShowsAgumon', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
 
-const createReply = (text: string, surface: 'terminal' | 'desktop') =>
-  ({ plugin: 'digi-theme', component: 'AssistantMessage', requestId: 'reply-1', surface, props: { text, isFirstOfReply: true } }) as const;
-
-const createToolResult = (tool: string, output: unknown, surface: 'terminal' | 'desktop' = 'terminal') =>
-  ({ plugin: 'digi-theme', component: 'ToolResult', requestId: 'tool-1', surface, props: { tool_use_id: 'tool-1', tool, output, isErrored: false } }) as const;
-
-const drawEngineText: Hook<'ui.render'> = (engine, event) => {
-  const { Text } = engine.ui.resolve(event);
-  return <Text>engine</Text>;
-};
-
-const drawReplyText: Hook<'ui.render'> = (engine, event) => {
-  const { Text } = engine.ui.resolve(event);
-  return <Text>{event.component === 'AssistantMessage' ? event.props.text : ''}</Text>;
-};
-
-const drawSpinnerWord: Hook<'ui.render'> = (engine, event) => {
-  const { Text } = engine.ui.resolve(event);
-  return <Text>{event.component === 'Spinner' ? event.props.word : ''}</Text>;
-};
-
-const drawTurnWord: Hook<'ui.render'> = (engine, event) => {
-  const { Text } = engine.ui.resolve(event);
-  return <Text>{event.component === 'TurnDuration' ? event.props.word : ''}</Text>;
-};
-
-test('Reply_BarChartFence_DrawsLabelledBar', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```hbar\nmega: 100\n```', 'terminal'));
-  const bar = await view.find({ type: 'Text', text: /mega/u });
-
-  expect(bar?.text).toMatch(/^mega █+ 100$/u);
-  await view.unmount();
+  expect(await runCommand(engine, '')).toContain('Partner: Agumon.');
 });
 
-test('Reply_UnparseableChart_DrawsReasonUnderSource', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```bar\njust words\n```', 'terminal'));
+test('agent-digitama_SaveVeemon_IsTheSavedPartner', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
+  await runCommand(engine, 'veemon');
 
-  expect(await view.find({ type: 'Code' })).toMatchObject({ props: { source: 'just words\n# no "name: number" rows' } });
-  await view.unmount();
+  expect(await runCommand(engine, '')).toContain('Partner: Veemon.');
 });
 
-test('Reply_YamlFenceInTerminal_ColorsKeysWithTerminalPalette', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```yaml\napps:\n  dotnet: { scope: machine }\n```', 'terminal'));
-  const runs = await view.findAll({ type: 'Text', text: /^apps$/u });
+test('agent-digitama_UnknownPartner_KeepsSavedPartner', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook, { partner: 'Gabumon' });
+  await startSession(engine);
+  await runCommand(engine, 'Pikachu');
 
-  expect(runs.map(run => run.props['color'])).toContain('error');
-  expect(await view.find({ type: 'Code' })).toBeUndefined();
-  await view.unmount();
+  expect(await runCommand(engine, '')).toContain('Partner: Gabumon.');
 });
 
-test('Reply_TomlFenceOnDesktop_LeavesCodeToEngine', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```toml\na = 1\n```', 'desktop'));
+test('agent-digitama_UnknownPartner_ListsChoices', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
 
-  expect(await view.find({ type: 'Code' })).toMatchObject({ props: { source: 'a = 1', language: 'toml' } });
-  await view.unmount();
+  expect(await runCommand(engine, 'Pikachu')).toContain('Choose one of: Agumon, Gabumon');
 });
 
-test('Reply_MermaidFlowchart_DrawsTree', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('```mermaid\ngraph TD\negg[Digitama] --> baby[Baby]\n```', 'terminal'));
-  const node = await view.find({ type: 'Text', text: /Baby/u });
+test('band_CorruptSavedPartner_HatchesAgumon', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  mock.store(hook, { partner: 42 });
+  await startSession(engine);
+  await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
+  await clock.advance(AFTER_SCENES_MS);
 
-  expect(node?.text).toBe('└─▶ Baby');
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
 });
 
-test('Reply_RemoteImage_DrawsLink', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('![egg](https://example.com/egg.png)', 'terminal'));
+test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook, { partner: 'Veemon' });
+  await startSession(engine);
 
-  expect(await view.find({ type: 'Link' })).toMatchObject({ props: { href: 'https://example.com/egg.png', label: 'egg' } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodeEgg('V_Digitama', 0));
 });
 
-test('Reply_LocalPngWithoutImageTerminal_DrawsFileLink', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('![egg](/tmp/egg.png)', 'terminal'));
+test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 0);
+  mock.store(hook, { partner: 'Veemon' });
+  await startSession(engine);
+  await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
+  await clock.advance(AFTER_SCENES_MS);
 
-  expect(await view.find({ type: 'Link' })).toMatchObject({ props: { href: 'file:///tmp/egg.png' } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Chicomon', 60));
 });
 
-test('Reply_ProseWithPath_HandsEngineALinkedPath', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  listen('ui.render', drawReplyText);
-  const view = await engine.ui.mount(createReply(String.raw`edited C:\repo\a.ts`, 'terminal'));
-  const text = await view.find({ type: 'Text' });
-
-  expect(text?.text).toBe(String.raw`edited [C:\repo\a.ts](file:///C:/repo/a.ts)`);
-  await view.unmount();
-});
-
-const testDesktopChart = (fence: string, mark: string): void => {
-  test(`Reply_${fence}ChartOnDesktop_DrawsSvg`, async (engine, listen) => {
-    listen('env.get', () => ({ value: undefined }));
-    const view = await engine.ui.mount(createReply(`\`\`\`${fence}\nmega: 100, 80\nultimate: 50, 60\n\`\`\``, 'desktop'));
-    const chart = await view.find({ type: 'Svg' });
-
-    expect(chart?.props).toMatchObject({ alt: `${fence} chart: mega 100, 80; ultimate 50, 60`, source: expect.stringContaining(mark) });
-    await view.unmount();
+test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  hook('store.get', () => {
+    throw new Error('unreadable store');
   });
-};
+  await hatchAgumon(engine, clock);
 
-testDesktopChart('bar', '<rect ');
-testDesktopChart('hbar', '<rect ');
-testDesktopChart('line', '<polyline ');
-testDesktopChart('spark', '<polyline ');
-testDesktopChart('pie', 'stroke-dasharray');
-
-test('Reply_ChartOverSvgLimitOnDesktop_DrawsTextBars', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const rows = Array.from({ length: 1000 }, (_row, index) => `row ${index}: ${index + 1}`).join('\n');
-  const view = await engine.ui.mount(createReply(`\`\`\`hbar\n${rows}\n\`\`\``, 'desktop'));
-  const bar = await view.find({ type: 'Text', text: /^row 999 /u });
-
-  expect(await view.find({ type: 'Svg' })).toBeUndefined();
-  expect(bar?.text).toMatch(/█ 1,000$/u);
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
 });
 
-test('Reply_HeadingAndCodeOnDesktop_DrawsTextAndCode', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createReply('# Partner\n\n```ts\nconst egg = 1;\n```', 'desktop'));
+test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  mock.store(hook);
+  hook('session.end', (_engine, event) => ({ sessionId: event.sessionId }));
+  await hatchAgumon(engine, clock);
+  await engine.session.end({
+    reason: 'clear',
+    sessionId: 'session-1',
+    resume: { id: 'session-1' }
+  });
 
-  const heading = await view.find({ type: 'Text', text: /Partner/u });
-
-  expect(heading?.text).toBe('✦ Partner');
-  expect(await view.find({ type: 'Code' })).toMatchObject({ props: { source: 'const egg = 1;', language: 'ts' } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodeEgg('Agu_Digitama', 0));
 });
 
-test('Reply_LocalPngOnDesktop_DrawsSvgImage', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  listen('fs.stat', () => ({ value: { kind: 'file', size: 70, mtimeMs: 1, isLink: false } }));
-  listen('fs.read', () => ({ value: { base64: DOT_PNG_BASE64 } }));
-  const view = await engine.ui.mount(createReply('![egg](/tmp/egg.png)', 'desktop'));
+test('band_FailedToolCall_FlashesRed', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  mock.store(hook);
+  hook('tool.call', () => ({ isError: true, result: 'Exit code 3', text: 'Exit code 3' }));
+  await hatchAgumon(engine, clock);
+  await engine.tool.call({ tool: 'Bash', command: 'exit 3' });
 
-  expect(await view.find({ type: 'Svg' })).toMatchObject({ props: { alt: 'egg', source: expect.stringContaining(`href="data:image/png;base64,${DOT_PNG_BASE64}"`) } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'hurt'));
 });
 
-test('ToolResult_EditOfFile_AddsFileLink', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createToolResult('Edit', { filePath: '/repo/a.ts' }));
+test('band_TurnComplete_Hops', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  mock.store(hook);
+  hook('turn.complete', (_engine, event) => ({ text: event.answer }));
+  await hatchAgumon(engine, clock);
+  await engine.turn.complete({
+    answer: 'done',
+    durationMs: 1000,
+    isAborted: false,
+    turnId: 'turn-1',
+    reason: 'answer'
+  });
 
-  expect(await view.find({ type: 'Link' })).toMatchObject({ props: { href: 'file:///repo/a.ts', label: '/repo/a.ts' } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'happy'));
 });
 
-test('ToolResult_ReadOfPngInImageTerminal_ShowsImage', async (engine, listen) => {
-  listen('env.get', (_engine, event) => ({ value: FORCED_IMAGE_ENV.get(event.name) }));
-  const view = await engine.ui.mount(createToolResult('Read', { type: 'image', file: { base64: DOT_PNG_BASE64, type: 'image/png', originalSize: 70 } }));
+test('band_PermissionPrompt_PulsesAmber', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 12);
+  mock.store(hook);
+  hook('classic.Notification', () => ({}));
+  await hatchAgumon(engine, clock);
+  await engine.classic.Notification({
+    message: 'Claude needs permission',
+    notification_type: 'permission_prompt'
+  });
 
-  expect(await view.find({ type: 'Image' })).toMatchObject({ props: { columns: 1, rows: 1 } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'angry'));
 });
 
-test('ToolResult_ReadOfPngOnDesktop_ShowsSvgImage', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  const view = await engine.ui.mount(createToolResult('Read', { type: 'image', file: { base64: DOT_PNG_BASE64, type: 'image/png', originalSize: 70 } }, 'desktop'));
+test('band_Hatching_ShowsCrackedEgg', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
+  await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
+  await clock.advance(1100);
 
-  expect(await view.find({ type: 'Svg' })).toMatchObject({ props: { alt: 'image preview' } });
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodeEgg('Agu_Digitama', 2));
 });
 
-test('ToolResult_NullOutput_LeavesRowToEngine', async (engine, listen) => {
-  listen('ui.render', drawEngineText);
-  const view = await engine.ui.mount(createToolResult('Bash', null));
-  const text = await view.find({ type: 'Text' });
+test('band_SavedGabumon_EvolvesIntoUpGarurumon', async (engine, hook) => {
+  const clock = stubEngine(hook, () => 40);
+  mock.store(hook, { partner: 'Gabumon' });
+  await hatchAgumon(engine, clock);
 
-  expect(text?.text).toBe('engine');
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodeUpFrame('Garurumon', 6));
 });
 
-test('Spinner_Sauteing_ShowsHatching', async (engine, listen) => {
-  listen('ui.render', drawSpinnerWord);
-  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'Spinner', requestId: 'spin', surface: 'terminal', props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' } });
-  const text = await view.find({ type: 'Text' });
+test('band_NarrowTerminal_HidesPartner', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
+  const band = await engine.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: 23 } });
 
-  expect(text?.text).toBe('Hatching');
-  await view.unmount();
+  expect(await band.find({ type: 'Raster', key: 'partner' })).toBeUndefined();
 });
 
-test('TurnDuration_Baked_ShowsCharged', async (engine, listen) => {
-  listen('ui.render', drawTurnWord);
-  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'TurnDuration', requestId: 'turn', surface: 'terminal', props: { word: 'Baked', durationMs: 3000 } });
-  const text = await view.find({ type: 'Text' });
+test('band_CompactionFromChampion_SettlesOnAgumon', async (engine, hook) => {
+  let contextPercent = 40;
+  const clock = stubEngine(hook, () => contextPercent);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
+  contextPercent = 12;
+  await clock.advance(AFTER_SCENES_MS);
 
-  expect(text?.text).toBe('Charged');
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 120));
 });
 
-test('Command_DigiTheme_ToursChartsGraphsAndImages', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  listen('command.register', () => ({ value: { command: 'digi-theme' } }));
-  listen('session.start', (_engine, event) => ({ cwd: event.cwd }));
-  await engine.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
-  const { text = '' } = await engine.command.run({ command: 'digi-theme', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
-  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'CommandOutput', requestId: 'tour', surface: 'terminal', props: { command: 'digi-theme', args: '', text, isErrored: false } });
-  const branch = await view.find({ type: 'Text', text: /Dark Champion/u });
+test('band_ChampionSetTo50_StaysAgumonAt40', { options: { champion_percent: 50, ultimate_percent: 60, mega_percent: 80 } }, async (engine, hook) => {
+  const clock = stubEngine(hook, () => 40);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
 
-  expect(branch?.text).toBe('        └─▶ ‹fear› Dark Champion');
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
 });
 
-test('Command_DigiThemeOnDesktop_DrawsChartsAsSvg', async (engine, listen) => {
-  listen('env.get', () => ({ value: undefined }));
-  listen('command.register', () => ({ value: { command: 'digi-theme' } }));
-  listen('session.start', (_engine, event) => ({ cwd: event.cwd }));
-  await engine.session.start({ cwd: '/', surface: 'desktop', isInteractive: true });
-  const { text = '' } = await engine.command.run({ command: 'digi-theme', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } });
-  const view = await engine.ui.mount({ plugin: 'digi-theme', component: 'CommandOutput', requestId: 'tour', surface: 'desktop', props: { command: 'digi-theme', args: '', text, isErrored: false } });
+test('band_MegaBelowUltimate_UsesDefaultStages', { options: { champion_percent: 45, ultimate_percent: 60, mega_percent: 20 } }, async (engine, hook) => {
+  const clock = stubEngine(hook, () => 40);
+  mock.store(hook);
+  await hatchAgumon(engine, clock);
 
-  expect(await view.find({ type: 'Svg' })).toBeDefined();
-  await view.unmount();
+  expect(await readBandCells(engine)).toBe(encodeUpFrame('Greymon', 6));
 });

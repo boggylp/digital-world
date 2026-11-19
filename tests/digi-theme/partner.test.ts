@@ -10,8 +10,8 @@ import {
   reactPartner,
   readThresholds,
   type Partner
-} from '../../plugins/agent-digitama/src/partner.ts';
-import { DEFAULT_LINE, type Stage } from '../../plugins/agent-digitama/src/roster.ts';
+} from '../../plugins/digi-theme/src/partner.ts';
+import { DEFAULT_LINE, type Stage } from '../../plugins/digi-theme/src/roster.ts';
 
 const createAgumon = (stage: Stage = 'Digitama'): Partner => ({
   ...createPartner(DEFAULT_LINE),
@@ -64,7 +64,7 @@ describe('readThresholds', () => {
   });
 
   it('readThresholds_ManifestDefaults_MatchCodeDefaults', async () => {
-    const manifest = JSON.parse(await readFile(new URL('../../plugins/agent-digitama/.claude-plugin/plugin.json', import.meta.url), 'utf8')) as { userConfig: Record<string, { default: number }> };
+    const manifest = JSON.parse(await readFile(new URL('../../plugins/digi-theme/.claude-plugin/plugin.json', import.meta.url), 'utf8')) as { userConfig: Record<string, { default: number }> };
     const defaults = Object.fromEntries(Object.entries(manifest.userConfig).map(([key, field]) => [key, field.default]));
     expect(readThresholds(defaults)).toStrictEqual(DEFAULT_THRESHOLDS);
   });
