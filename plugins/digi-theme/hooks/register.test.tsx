@@ -11,6 +11,7 @@ import {
   hatchAgumon,
   readBandCells
 } from './fixtures.tsx';
+import { LINES } from '../src/roster.ts';
 
 test('agent-digitama_NoSavedPartner_ShowsAgumon', async (engine, hook) => {
   stubEngine(hook, () => 0);
@@ -27,6 +28,24 @@ test('agent-digitama_SaveVeemon_IsTheSavedPartner', async (engine, hook) => {
   await runCommand(engine, 'veemon');
 
   expect(await runCommand(engine, '')).toContain('Partner: Veemon.');
+});
+
+test('agent-digitama_SaveRandom_IsTheSavedPartner', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook);
+  await startSession(engine);
+  await runCommand(engine, 'random');
+
+  expect(await runCommand(engine, '')).toContain('Partner: Random.');
+});
+
+test('band_SavedRandom_ShowsSomeDigitama', async (engine, hook) => {
+  stubEngine(hook, () => 0);
+  mock.store(hook, { partner: 'Random' });
+  await startSession(engine);
+
+  const eggs = LINES.map((line) => encodeEgg(line.forms.Digitama, 0));
+  expect(eggs).toContain(await readBandCells(engine));
 });
 
 test('agent-digitama_UnknownPartner_KeepsSavedPartner', async (engine, hook) => {

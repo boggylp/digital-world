@@ -57,7 +57,7 @@ Claude Code hides the band while a dialog is open, so a question or permission d
 /agent-digitama Veemon
 ```
 
-New sessions hatch the saved partner's egg. The current session keeps its partner. Run `/agent-digitama` with no name to see the saved partner and the choices: Agumon, Gabumon, Biyomon, Palmon, Salamon, Veemon. Without a saved choice, the partner is Agumon.
+New sessions hatch the saved partner's egg. The current session keeps its partner. Run `/agent-digitama` with no name to see the saved partner and the choices: Agumon, Gabumon, Biyomon, Palmon, Salamon, Veemon. Save `Random` to hatch a different egg from those six in each new session. Without a saved choice, the partner is Agumon.
 
 ### Sprites
 

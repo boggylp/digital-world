@@ -28,8 +28,9 @@ import { LOOK } from './look.ts';
 import { registerLook, TOUR_COMMAND, UNPAINTED } from './restyle.tsx';
 
 const STORE_KEY = 'partner';
+const RANDOM = 'Random';
 const MEASURE_EVERY_TICKS = 20;
-const PARTNER_LIST = LINES.map((line) => line.partner).join(', ');
+const PARTNER_LIST = [...LINES.map((line) => line.partner), RANDOM].join(', ');
 
 let partner: Partner = createPartner(DEFAULT_LINE);
 let tick = 0;
@@ -80,13 +81,19 @@ const readImageSupport = async (engine: EngineInterface): Promise<boolean> => {
   );
 };
 
-const readSavedLine = async (engine: EngineInterface): Promise<Line> => {
+const readSavedChoice = async (engine: EngineInterface): Promise<string> => {
   const saved: unknown = await engine.store.get(STORE_KEY).catch(() => null);
-  return (typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE;
+  if (saved === RANDOM) return RANDOM;
+  return ((typeof saved === 'string' ? findLine(saved) : null) ?? DEFAULT_LINE).partner;
 };
 
+const pickLine = (choice: string): Line =>
+  choice === RANDOM
+    ? (LINES[Math.floor(Math.random() * LINES.length)] ?? DEFAULT_LINE)
+    : (findLine(choice) ?? DEFAULT_LINE);
+
 const hatchSavedPartner = async (engine: EngineInterface): Promise<void> => {
-  partner = createPartner(await readSavedLine(engine));
+  partner = createPartner(pickLine(await readSavedChoice(engine)));
   scene = null;
   sceneTarget = null;
   percent = 0;
@@ -191,8 +198,12 @@ const registerLifecycleHooks = (hook: On): void => {
   hook('command.run', { command: 'agent-digitama' }, async (engine, event) => {
     const wanted = event.args.trim();
     if (wanted === '') {
-      const { partner: current } = await readSavedLine(engine);
+      const current = await readSavedChoice(engine);
       return { text: `Partner: ${current}. Choose one of: ${PARTNER_LIST}.` };
+    }
+    if (wanted.toLowerCase() === RANDOM.toLowerCase()) {
+      await engine.store.set(STORE_KEY, RANDOM);
+      return { text: 'Saved Random. Each new session hatches a random Digitama.' };
     }
     const line = findLine(wanted);
     if (line === null) {
