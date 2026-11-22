@@ -7,7 +7,7 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.json",
     "highlight:build": "node scripts/build-highlight.ts",
     "sprites:fetch": "node scripts/fetch-sprites.ts",
-    "sprites:build": "node scripts/build-sprites.ts && node scripts/build-up-sprites.ts && oxfmt --write src/sprites.generated.ts src/up-sprites.generated.ts src/up-images.generated.ts src/up-images",
+    "sprites:build": "node scripts/build-sprites.ts && node scripts/build-up-sprites.ts && oxfmt --write src/sprites.generated.ts src/up-images.generated.ts src/up-images",
     "format": "oxfmt --write ."
   },
   "devDependencies": {

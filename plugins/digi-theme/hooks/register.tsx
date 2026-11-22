@@ -18,11 +18,10 @@ import { DEFAULT_LINE, findLine, LINES, type Line } from '../src/roster.ts';
 import {
   createImageSource,
   encodeImagePixels,
-  encodePixels,
   encodeSvgPixels,
   type Pixel
 } from '../src/sprite.ts';
-import { drawCellCorner, drawSvgCorner, fitsCellCorner, placeCorner, RASTER_KEY } from './corner.tsx';
+import { drawImageCorner, drawSvgCorner, fitsImageCorner, placeCorner, PARTNER_KEY } from './corner.tsx';
 import { createTransition, findScenePixels, type Scene } from '../src/transition.ts';
 import { LOOK } from './look.ts';
 import { registerLook, TOUR_COMMAND, UNPAINTED } from './restyle.tsx';
@@ -36,7 +35,7 @@ let partner: Partner = createPartner(DEFAULT_LINE);
 let tick = 0;
 let percent = 0;
 let bandId: string | null = null;
-let sentCells: string | null = null;
+let sentRgba: string | null = null;
 let sentSvg: string | null = null;
 let ticker: { cancel: () => void } | null = null;
 let scene: Scene | null = null;
@@ -44,7 +43,7 @@ let sceneStart = 0;
 let sceneTarget: Partner | null = null;
 let isTicking = false;
 let isErrorLogged = false;
-let isImage = false;
+let canDrawImage = false;
 let hasDrawnImage = false;
 let thresholds: Thresholds | null = DEFAULT_THRESHOLDS;
 const encodedScenes = new WeakMap<Pixel[][], string>();
@@ -52,7 +51,7 @@ const encodedScenes = new WeakMap<Pixel[][], string>();
 const countBeats = (): number => Math.floor(tick / BEAT_TICKS);
 
 const startScene = (source: Partner, target: Partner): void => {
-  scene = createTransition(source, target, isImage);
+  scene = createTransition(source, target);
   sceneStart = tick;
   sceneTarget = target;
 };
@@ -97,28 +96,28 @@ const hatchSavedPartner = async (engine: EngineInterface): Promise<void> => {
   scene = null;
   sceneTarget = null;
   percent = 0;
-  sentCells = null;
+  sentRgba = null;
   engine.ui.invalidate('ui.render');
 };
 
 const encodeScenePixels = (pixels: Pixel[][]): string => {
   const cached = encodedScenes.get(pixels);
   if (cached !== undefined) return cached;
-  const cells = isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
-  encodedScenes.set(pixels, cells);
-  return cells;
+  const rgba = encodeImagePixels(pixels);
+  encodedScenes.set(pixels, rgba);
+  return rgba;
 };
 
 const readScenePixels = (): Pixel[][] | null =>
   scene === null ? null : findScenePixels(scene, tick - sceneStart);
 
-const readFramePixels = (): Pixel[][] => readScenePixels() ?? readPartnerPixels(partner, tick, isImage);
+const readFramePixels = (): Pixel[][] => readScenePixels() ?? readPartnerPixels(partner, tick);
 
-const encodeCells = (): string => {
+const encodeFrame = (): string => {
   const scenePixels = readScenePixels();
-  if (scenePixels !== null) return encodeScenePixels(scenePixels);
-  const pixels = readPartnerPixels(partner, tick, isImage);
-  return isImage ? encodeImagePixels(pixels) : encodePixels(pixels);
+  return scenePixels === null
+    ? encodeImagePixels(readPartnerPixels(partner, tick))
+    : encodeScenePixels(scenePixels);
 };
 
 const measureContext = async (engine: EngineInterface): Promise<void> => {
@@ -129,22 +128,19 @@ const measureContext = async (engine: EngineInterface): Promise<void> => {
 
 const blitFrame = async (engine: EngineInterface): Promise<void> => {
   if (bandId === null) return;
-  const cells = encodeCells();
-  if (cells === sentCells) return;
-  sentCells = cells;
-  const address = { requestId: bandId, key: RASTER_KEY };
-  const result = await engine.ui.blit(
-    isImage ? { ...address, source: createImageSource(cells) } : { ...address, cells }
-  );
-  hasDrawnImage ||= isImage && result.deny === undefined;
+  const rgba = encodeFrame();
+  if (rgba === sentRgba) return;
+  sentRgba = rgba;
+  const result = await engine.ui.blit({
+    requestId: bandId,
+    key: PARTNER_KEY,
+    source: createImageSource(rgba)
+  });
+  hasDrawnImage ||= result.deny === undefined;
   if (result.deny === undefined) return;
-  if (isImage && !hasDrawnImage) {
-    isImage = false;
-    scene = null;
-    sceneTarget = null;
-  }
+  canDrawImage = hasDrawnImage;
   bandId = null;
-  sentCells = null;
+  sentRgba = null;
   engine.ui.invalidate('ui.render');
 };
 
@@ -173,7 +169,7 @@ const runTick = async (engine: EngineInterface): Promise<void> => {
 const registerLifecycleHooks = (hook: On): void => {
   // The engine refuses a second unmatched session.start, so this one also starts the look.
   hook('session.start', async (engine, event, proceed) => {
-    isImage = event.surface !== 'terminal' || (await readImageSupport(engine));
+    canDrawImage = await readImageSupport(engine);
     hasDrawnImage = false;
     await hatchSavedPartner(engine);
     await engine.command.register({
@@ -255,14 +251,18 @@ const readForm = (): string => partner.line.forms[partner.stage];
 
 const drawTerminalCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {
   sentSvg = null;
-  if (event.surface !== 'terminal' || event.props.hasSurvey || !fitsCellCorner(isImage, event.props)) {
+  const isDrawable =
+    event.surface === 'terminal' &&
+    canDrawImage &&
+    !event.props.hasSurvey &&
+    fitsImageCorner(event.props);
+  if (!isDrawable) {
     bandId = null;
     return null;
   }
   bandId = event.requestId;
-  const cells = encodeCells();
-  sentCells = isImage ? null : cells;
-  return drawCellCorner(engine.ui.resolve(event), { cells, isImage, alt: readForm() });
+  sentRgba = null;
+  return drawImageCorner(engine.ui.resolve(event), { rgba: encodeFrame(), alt: readForm() });
 };
 
 const drawDesktopCorner = (engine: EngineInterface, event: BandEvent): RenderElement | null => {

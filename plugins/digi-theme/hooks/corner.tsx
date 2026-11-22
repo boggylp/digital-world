@@ -1,50 +1,28 @@
 import type { ElementTable, RenderElement } from 'claude-code';
 
-import {
-  createImageSource,
-  IMAGE_COLUMNS,
-  IMAGE_ROWS,
-  SPRITE_COLUMNS,
-  SPRITE_ROWS,
-  type Pixel
-} from '../src/sprite.ts';
+import { createImageSource, IMAGE_COLUMNS, IMAGE_ROWS, type Pixel } from '../src/sprite.ts';
 
-export const RASTER_KEY = 'partner';
+export const PARTNER_KEY = 'partner';
 const SVG_HEIGHT_PX = 64;
 
-export type CellFrame = { cells: string; isImage: boolean; alt: string };
+export type ImageFrame = { rgba: string; alt: string };
 export type SvgFrame = { pixels: Pixel[][]; source: string; alt: string };
 
-const measureCellCorner = (isImage: boolean): { columns: number; rows: number } =>
-  isImage
-    ? { columns: IMAGE_COLUMNS, rows: IMAGE_ROWS }
-    : { columns: SPRITE_COLUMNS, rows: SPRITE_ROWS };
+export const fitsImageCorner = (band: { maxRows: number; bodyColumns: number }): boolean =>
+  band.maxRows >= IMAGE_ROWS && band.bodyColumns >= IMAGE_COLUMNS;
 
-export const fitsCellCorner = (
-  isImage: boolean,
-  band: { maxRows: number; bodyColumns: number }
-): boolean => {
-  const { columns, rows } = measureCellCorner(isImage);
-  return band.maxRows >= rows && band.bodyColumns >= columns;
-};
-
-export const drawCellCorner = (
-  { Raster, Image }: ElementTable<'terminal'>,
-  frame: CellFrame
-): RenderElement => {
-  const { columns, rows } = measureCellCorner(frame.isImage);
-  return frame.isImage ? (
-    <Image
-      key={RASTER_KEY}
-      columns={columns}
-      rows={rows}
-      source={createImageSource(frame.cells)}
-      alt={frame.alt}
-    />
-  ) : (
-    <Raster key={RASTER_KEY} columns={columns} rows={rows} cells={frame.cells} />
-  );
-};
+export const drawImageCorner = (
+  { Image }: ElementTable<'terminal'>,
+  frame: ImageFrame
+): RenderElement => (
+  <Image
+    key={PARTNER_KEY}
+    columns={IMAGE_COLUMNS}
+    rows={IMAGE_ROWS}
+    source={createImageSource(frame.rgba)}
+    alt={frame.alt}
+  />
+);
 
 export const drawSvgCorner = ({ Svg }: ElementTable<'desktop'>, frame: SvgFrame): RenderElement => {
   const columns = frame.pixels[0]?.length ?? 0;

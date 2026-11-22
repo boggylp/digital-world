@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-22
+
+### Breaking
+
+- The text-cell partner is removed. Terminals without image support show no partner, and so does a session whose first image Claude refuses.
+
 ## [0.4.2] - 2026-11-21
 
 ### Added

@@ -4,14 +4,15 @@ import { readPartnerPixels } from '../src/animation.ts';
 import { createPartner, type Reaction } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
 import {
-  encodePixels,
+  createImageSource,
+  encodeImagePixels,
   placeDotPixels,
   readAnimationPixels,
   readPixels,
   type Pixel
 } from '../src/sprite.ts';
 import { SHEETS } from '../src/sprites.generated.ts';
-import { UP_SPRITES } from '../src/up-sprites.generated.ts';
+import { UP_IMAGES } from '../src/up-images.generated.ts';
 
 const UNEXPIRED_REACTION_TICK = 1000;
 
@@ -31,10 +32,12 @@ export const BAND = {
   }
 } as const;
 
+export const IMAGE_TERMINAL = { TERM_PROGRAM: 'ghostty' };
+
 export const stubEngine = (
   hook: On,
   readPercent: () => number,
-  environment: Record<string, string> = {}
+  environment: Record<string, string> = IMAGE_TERMINAL
 ): MockClock => {
   mock.env(hook, environment);
   hook('command.register', () => ({ value: { command: 'agent-digitama' } }));
@@ -70,8 +73,7 @@ export const runCommand = async (engine: Engine, args: string): Promise<string |
 export const readPartnerFrame = (
   form: string,
   tick: number,
-  reaction: Reaction | null = null,
-  isImage = false
+  reaction: Reaction | null = null
 ): Pixel[][] => {
   const partner = {
     ...createPartner(DEFAULT_LINE),
@@ -80,28 +82,32 @@ export const readPartnerFrame = (
     reaction,
     reactionUntilTick: reaction === null ? 0 : UNEXPIRED_REACTION_TICK
   };
-  return readPartnerPixels(partner, tick, isImage);
+  return readPartnerPixels(partner, tick);
 };
+
+type ImageSource = ReturnType<typeof createImageSource>;
+
+const drawPixels = (pixels: Pixel[][]): ImageSource => createImageSource(encodeImagePixels(pixels));
 
 export const encodePartner = (
   form: string,
   tick: number,
   reaction: Reaction | null = null
-): string => encodePixels(readPartnerFrame(form, tick, reaction));
+): ImageSource => drawPixels(readPartnerFrame(form, tick, reaction));
 
-export const encodeUpFrame = (form: string, index: number): string => {
-  const animation = UP_SPRITES[form];
+export const encodeUpFrame = (form: string, index: number): ImageSource => {
+  const animation = UP_IMAGES[form];
   const frame = animation?.walking[index];
   if (animation === undefined || frame === undefined) {
     throw new Error(`Missing UP frame ${form}:${index}`);
   }
-  return encodePixels(readAnimationPixels(animation, frame));
+  return drawPixels(readAnimationPixels(animation, frame));
 };
 
-export const encodeEgg = (form: string, frame: number): string => {
+export const encodeEgg = (form: string, frame: number): ImageSource => {
   const sheet = SHEETS[form];
   if (sheet === undefined) throw new Error(`Missing egg ${form}`);
-  return encodePixels(placeDotPixels(readPixels(sheet, frame, false)));
+  return drawPixels(placeDotPixels(readPixels(sheet, frame, false)));
 };
 
 export const AFTER_SCENES_MS = 6000;
@@ -116,11 +122,11 @@ export const hatchAgumon = async (
   await clock.advance(AFTER_SCENES_MS);
 };
 
-export const readBandCells = async (engine: Engine): Promise<unknown> => {
+export const readBandImage = async (engine: Engine): Promise<unknown> => {
   const band = await engine.ui.mount(BAND);
-  const raster = await band.find({ type: 'Raster', key: 'partner' });
+  const image = await band.find({ type: 'Image', key: 'partner' });
   await band.unmount();
-  return raster?.props.cells;
+  return image?.props.source;
 };
 
 export const DESKTOP_BAND = { ...BAND, surface: 'desktop' } as const;

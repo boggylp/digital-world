@@ -15,13 +15,13 @@ import {
 const BEAT_MS = 500;
 
 const encodeAgumon = (tick: number): string =>
-  encodeSvgPixels(readPartnerFrame('Agumon', tick, null, true));
+  encodeSvgPixels(readPartnerFrame('Agumon', tick));
 
 test('desktopBand_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
   stubEngine(hook, () => 0);
   mock.store(hook);
   await startSession(engine, 'desktop');
-  const egg = readPartnerPixels(createPartner(DEFAULT_LINE), 0, true);
+  const egg = readPartnerPixels(createPartner(DEFAULT_LINE), 0);
 
   expect(await readBandSvg(engine)).toBe(encodeSvgPixels(egg));
 });

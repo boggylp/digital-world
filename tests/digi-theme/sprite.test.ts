@@ -2,34 +2,18 @@
 
 import { LINES } from '../../plugins/digi-theme/src/roster.ts';
 import {
-  DEFAULT_COLOR,
   FRAMES,
   encodeImagePixels,
   encodeSvgPixels,
   packAnimations,
-  packHalfBlocks,
   readAnimationPixels,
-  readPixels,
-  TRANSPARENT,
-  type Sheet
+  TRANSPARENT
 } from '../../plugins/digi-theme/src/sprite.ts';
 import { SHEETS } from '../../plugins/digi-theme/src/sprites.generated.ts';
-import { UP_SPRITES } from '../../plugins/digi-theme/src/up-sprites.generated.ts';
+import { UP_IMAGES } from '../../plugins/digi-theme/src/up-images.generated.ts';
 
 const RED = 0xff_00_00;
 const BLUE = 0x00_00_ff;
-
-const createSheet = (firstRow: string, secondRow: string): Sheet => {
-  const blankRow = '.'.repeat(16);
-  return {
-    palette: [RED, BLUE],
-    frames: [firstRow.padEnd(16, '.') + secondRow.padEnd(16, '.') + blankRow.repeat(14)]
-  };
-};
-
-const readCell = (cells: Uint32Array, column: number): number[] => [
-  ...cells.subarray(column * 3, column * 3 + 3)
-];
 
 describe('animation encoding', () => {
   it('encodeImagePixels_ColorsAndTransparency_ProducesRgbaBytes', () => {
@@ -63,28 +47,6 @@ describe('animation encoding', () => {
   });
 });
 
-describe('packHalfBlocks', () => {
-  it('packHalfBlocks_BothPixelsOpaque_DrawsUpperHalfOverBottom', () => {
-    const cells = packHalfBlocks(readPixels(createSheet('a', 'b'), 0, false));
-    expect(readCell(cells, 0)).toStrictEqual([0x25_80, RED, BLUE]);
-  });
-
-  it('packHalfBlocks_OnlyBottomOpaque_DrawsLowerHalf', () => {
-    const cells = packHalfBlocks(readPixels(createSheet('.', 'b'), 0, false));
-    expect(readCell(cells, 0)).toStrictEqual([0x25_84, BLUE, DEFAULT_COLOR]);
-  });
-
-  it('packHalfBlocks_BothTransparent_DrawsDefaultSpace', () => {
-    const cells = packHalfBlocks(readPixels(createSheet('.', '.'), 0, false));
-    expect(readCell(cells, 0)).toStrictEqual([0x20, DEFAULT_COLOR, DEFAULT_COLOR]);
-  });
-
-  it('packHalfBlocks_MirroredFrame_MovesPixelToLastColumn', () => {
-    const cells = packHalfBlocks(readPixels(createSheet('a', ''), 0, true));
-    expect(readCell(cells, 15)).toStrictEqual([0x25_80, RED, DEFAULT_COLOR]);
-  });
-});
-
 const listBlankFrames = (name: string, frames: readonly number[]): number[] => {
   const sheet = SHEETS[name];
   return frames.filter((frame) => (sheet?.frames[frame] ?? '').replaceAll(TRANSPARENT, '') === '');
@@ -96,9 +58,9 @@ describe('sHEETS', () => {
   });
 
   it.each(LINES.flatMap(({ forms: { Digitama: _egg, ...forms } }) => Object.values(forms)))(
-    'uP_SPRITES_%s_HasWalkingAndIdleFrames',
+    'uP_IMAGES_%s_HasWalkingAndIdleFrames',
     (name) => {
-      const animation = UP_SPRITES[name];
+      const animation = UP_IMAGES[name];
       assert.isDefined(animation);
       expect(animation.walking.length).toBeGreaterThan(0);
       expect(animation.idle.length).toBeGreaterThan(0);

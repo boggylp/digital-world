@@ -116,14 +116,14 @@ export const findScenePixels = (scene: Scene, tick: number): Pixel[][] | null =>
   return null;
 };
 
-export const createTransition = (source: Partner, target: Partner, isImage: boolean): Scene => {
+export const createTransition = (source: Partner, target: Partner): Scene => {
   const before = source.line.forms[source.stage];
-  const after = readStillPixels(target.line.forms[target.stage], isImage);
+  const after = readStillPixels(target.line.forms[target.stage]);
   if (source.stage === 'Digitama') {
     const egg = SHEETS[before];
     if (egg === undefined) throw new Error(`No egg sprite for ${before}`);
     return createHatching(egg, after);
   }
   const isRising = STAGES.indexOf(target.stage) > STAGES.indexOf(source.stage);
-  return createDigivolution(readStillPixels(before, isImage), after, isRising);
+  return createDigivolution(readStillPixels(before), after, isRising);
 };

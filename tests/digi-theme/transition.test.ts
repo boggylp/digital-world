@@ -42,7 +42,7 @@ describe('createDigivolution', () => {
     const dimensions = new Set(
       scene.flatMap(({ pixels }) => pixels.map((row) => `${pixels.length}x${row.length}`))
     );
-    expect(dimensions).toStrictEqual(new Set(['16x24']));
+    expect(dimensions).toStrictEqual(new Set(['80x80']));
   });
 });
 

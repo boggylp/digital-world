@@ -10,8 +10,6 @@ import {
   IMAGE_CANVAS,
   packAnimations,
   CENTERING_DIVISOR,
-  SPRITE_CANVAS,
-  type Canvas,
   type Animations,
   type Pixel
 } from '../src/sprite.ts';
@@ -33,7 +31,7 @@ const aliases: Record<string, string> = {
   Imperialdramon_Fighter: 'imperialdramon_fightermode'
 };
 const directory = process.argv[2] ?? 'assets/digimon-up';
-const output = process.argv[3] ?? 'src/up-sprites.generated.ts';
+const output = process.argv[3] ?? 'src/up-images.generated.ts';
 const records: Record<string, string>[] = parse(
   await readFile(join(directory, 'sequences.csv')),
   {
@@ -49,11 +47,7 @@ const resolveFramePath = (name: string, token: string): string => {
   return join(directory, 'sprites', folder, `${folder}_${parts.at(-1)}.png`);
 };
 
-const readAnimationFrames = (
-  paths: string[],
-  scale: number,
-  canvas: Canvas
-): Promise<Pixel[][][]> =>
+const readAnimationFrames = (paths: string[], scale: number): Promise<Pixel[][][]> =>
   Promise.all(
     paths.map(async (path) => {
       const image = sharp(path);
@@ -61,22 +55,22 @@ const readAnimationFrames = (
       if (!width || !height) throw new Error(`${path}: missing dimensions`);
       const resizedWidth = Math.max(1, Math.round(width * scale));
       const resizedHeight = Math.max(1, Math.round(height * scale));
-      const left = Math.floor((canvas.columns - resizedWidth) / CENTERING_DIVISOR);
+      const left = Math.floor((IMAGE_CANVAS.columns - resizedWidth) / CENTERING_DIVISOR);
       const pixels = await image
         .resize(resizedWidth, resizedHeight, { kernel: 'nearest', fit: 'fill' })
         .extend({
-          top: canvas.height - resizedHeight,
+          top: IMAGE_CANVAS.height - resizedHeight,
           bottom: 0,
           left,
-          right: canvas.columns - resizedWidth - left,
+          right: IMAGE_CANVAS.columns - resizedWidth - left,
           background: { r: 0, g: 0, b: 0, alpha: 0 }
         })
         .ensureAlpha()
         .raw()
         .toBuffer();
-      const frame = Array.from({ length: canvas.height }, (_row, row) =>
-        Array.from({ length: canvas.columns }, (_column, column) =>
-          readOpaqueColor(pixels, row * canvas.columns + column)
+      const frame = Array.from({ length: IMAGE_CANVAS.height }, (_row, row) =>
+        Array.from({ length: IMAGE_CANVAS.columns }, (_column, column) =>
+          readOpaqueColor(pixels, row * IMAGE_CANVAS.columns + column)
         )
       );
       if (frame.every((row) => row.every((pixel) => pixel === null))) {
@@ -86,20 +80,16 @@ const readAnimationFrames = (
     })
   );
 
-const buildAnimation = async (
-  walking: string[],
-  idle: string[],
-  canvas: Canvas
-): Promise<Animations> => {
+const buildAnimation = async (walking: string[], idle: string[]): Promise<Animations> => {
   const dimensions = await Promise.all([...walking, ...idle].map((path) => sharp(path).metadata()));
   const scale = Math.min(
-    canvas.columns / Math.max(...dimensions.map(({ width }) => width ?? 0)),
-    (canvas.height - canvas.height / FRAME_SIZE) /
+    IMAGE_CANVAS.columns / Math.max(...dimensions.map(({ width }) => width ?? 0)),
+    (IMAGE_CANVAS.height - IMAGE_CANVAS.height / FRAME_SIZE) /
       Math.max(...dimensions.map(({ height }) => height ?? 0))
   );
   return packAnimations(
-    await readAnimationFrames(walking, scale, canvas),
-    await readAnimationFrames(idle, scale, canvas)
+    await readAnimationFrames(walking, scale),
+    await readAnimationFrames(idle, scale)
   );
 };
 
@@ -109,7 +99,7 @@ const resolveSequence = (upstream: string, sequence: string): string[] =>
     .split(/\s+/u)
     .map((token) => resolveFramePath(upstream, token));
 
-const sprites: Record<string, Animations> = {};
+const forms: string[] = [];
 const imageImports: string[] = [];
 const imageEntries: string[] = [];
 const imageDirectory = join(dirname(output), 'up-images');
@@ -122,9 +112,9 @@ const buildForm = async (
   if (!record.idle?.trim()) throw new Error(`${upstream}: missing idle sequence`);
   const idle = resolveSequence(upstream, record.idle);
   const walking = record.walking?.trim() ? resolveSequence(upstream, record.walking) : idle;
-  sprites[name] = await buildAnimation(walking, idle, SPRITE_CANVAS);
-  const image = await buildAnimation(walking, idle, IMAGE_CANVAS);
+  const image = await buildAnimation(walking, idle);
   const identifier = `image${imageImports.length}`;
+  forms.push(name);
   imageImports.push(
     `import { animation as ${identifier} } from './up-images/${upstream}.generated.ts';`
   );
@@ -144,10 +134,6 @@ for (const name of new Set(LINES.flatMap((line) => Object.values(line.forms)))) 
 
 await writeFile(
   output,
-  `import type { Animations } from './sprite.ts';\n\nexport const UP_SPRITES: Record<string, Animations> = JSON.parse(${JSON.stringify(JSON.stringify(sprites))});\n`
-);
-await writeFile(
-  join(dirname(output), 'up-images.generated.ts'),
   `import type { Animations } from './sprite.ts';\n${imageImports.join('\n')}\n\nexport const UP_IMAGES: Record<string, Animations> = {${imageEntries.join(',')}};\n`
 );
-console.log(`Built Digimon UP animations for ${Object.keys(sprites).join(', ')}`);
+console.log(`Built Digimon UP animations for ${forms.join(', ')}`);

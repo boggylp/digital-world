@@ -22,5 +22,5 @@ SOFTWARE.
 
 This license does not cover the Digimon sprite artwork or the data
 generated from it in plugins/digi-theme: sprites/, src/sprites.generated.ts,
-src/up-sprites.generated.ts, src/up-images/ and assets/digimon-up/.
+src/up-images/ and assets/digimon-up/.
 See plugins/digi-theme/CREDITS.md.

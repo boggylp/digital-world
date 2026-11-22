@@ -1,22 +1,15 @@
-import { expect, mock, test, type Engine } from 'claude-code/testing';
+import { expect, mock, test } from 'claude-code/testing';
 import { readPartnerPixels, readStillPixels } from '../src/animation.ts';
 import { createPartner } from '../src/partner.ts';
 import { DEFAULT_LINE } from '../src/roster.ts';
-import { encodeImagePixels, IMAGE_COLUMNS, IMAGE_ROWS, SPRITE_COLUMNS, SPRITE_ROWS } from '../src/sprite.ts';
+import { encodeImagePixels, IMAGE_COLUMNS, IMAGE_ROWS } from '../src/sprite.ts';
 import {
   BAND,
   stubEngine,
   startSession,
   hatchAgumon,
-  encodePartner
+  readBandImage
 } from './fixtures.tsx';
-
-const readBandImage = async (engine: Engine): Promise<unknown> => {
-  const band = await engine.ui.mount(BAND);
-  const image = await band.find({ type: 'Image', key: 'partner' });
-  await band.unmount();
-  return image?.props.source;
-};
 
 test('band_Ghostty_RendersImagePixels', async (engine, hook) => {
   stubEngine(hook, () => 0, { TERM_PROGRAM: 'ghostty' });
@@ -24,7 +17,7 @@ test('band_Ghostty_RendersImagePixels', async (engine, hook) => {
   await startSession(engine);
 
   expect(await readBandImage(engine)).toEqual({
-    rgba: encodeImagePixels(readStillPixels('Agu_Digitama', true)),
+    rgba: encodeImagePixels(readStillPixels('Agu_Digitama')),
     width: 80,
     height: 80
   });
@@ -36,7 +29,7 @@ test('band_ExplicitImageSupport_RendersImagePixels', async (engine, hook) => {
   await startSession(engine);
 
   expect(await readBandImage(engine)).toEqual({
-    rgba: encodeImagePixels(readStillPixels('Agu_Digitama', true)),
+    rgba: encodeImagePixels(readStillPixels('Agu_Digitama')),
     width: 80,
     height: 80
   });
@@ -49,26 +42,30 @@ test('band_ImageHatching_ReachesDetailedAgumon', async (engine, hook) => {
   const partner = { ...createPartner(DEFAULT_LINE), stage: 'Rookie' as const };
 
   expect(await readBandImage(engine)).toEqual({
-    rgba: encodeImagePixels(readPartnerPixels(partner, 60, true)),
+    rgba: encodeImagePixels(readPartnerPixels(partner, 60)),
     width: 80,
     height: 80
   });
 });
 
-test('band_DeniedImageDuringHatching_RendersTextCellBaby', async (engine, hook) => {
+test('band_TerminalWithoutImageSupport_HidesPartner', async (engine, hook) => {
+  stubEngine(hook, () => 0, {});
+  mock.store(hook);
+  await startSession(engine);
+
+  expect(await readBandImage(engine)).toBeUndefined();
+});
+
+test('band_DeniedFirstImage_HidesPartner', async (engine, hook) => {
   const clock = stubEngine(hook, () => 0, { TERM_PROGRAM: 'ghostty' });
   mock.store(hook);
   hook('ui.blit', () => ({ value: { deny: 'Images unavailable' } }));
   await startSession(engine);
-  await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   const band = await engine.ui.mount(BAND);
   await clock.advance(100);
   await band.unmount();
-  const textBand = await engine.ui.mount(BAND);
-  const raster = await textBand.find({ type: 'Raster', key: 'partner' });
-  await textBand.unmount();
 
-  expect(raster?.props).toMatchObject({ columns: SPRITE_COLUMNS, rows: SPRITE_ROWS, cells: encodePartner('Botamon', 1) });
+  expect(await readBandImage(engine)).toBeUndefined();
 });
 
 test('band_DeniedImageAfterOneWasDrawn_KeepsImagePartner', async (engine, hook) => {
@@ -106,7 +103,7 @@ test('band_MountedImage_SendsDetailedAnimationUpdates', async (engine, hook) => 
     requestId: 'band',
     key: 'partner',
     source: {
-      rgba: encodeImagePixels(readPartnerPixels(partner, 62, true)),
+      rgba: encodeImagePixels(readPartnerPixels(partner, 62)),
       width: 80,
       height: 80
     }

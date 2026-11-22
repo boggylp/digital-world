@@ -1,12 +1,7 @@
 export const FRAME_SIZE = 16;
-const PIXEL_ROWS_PER_CELL = 2;
-export const SPRITE_COLUMNS = 24;
-export const SPRITE_HEIGHT = 16;
-export const SPRITE_ROWS = SPRITE_HEIGHT / PIXEL_ROWS_PER_CELL;
 export const IMAGE_COLUMNS = 8;
 export const IMAGE_ROWS = 4;
 export type Canvas = { columns: number; height: number };
-export const SPRITE_CANVAS: Canvas = { columns: SPRITE_COLUMNS, height: SPRITE_HEIGHT };
 export const IMAGE_CANVAS: Canvas = { columns: 80, height: 80 };
 
 const CRACK_FRAME = 2;
@@ -16,13 +11,9 @@ export const FRAMES = {
   crack: [CRACK_FRAME]
 } as const;
 
-export const DEFAULT_COLOR = 0x01_00_00_00;
-const UPPER_HALF_BLOCK = 0x25_80;
-const LOWER_HALF_BLOCK = 0x25_84;
 const SPACE = 0x20;
 const FIRST_SYMBOL = 0x21;
 const FIRST_SURROGATE = 0xd8_00;
-const CELL_FIELDS = 3;
 export const RGBA_CHANNELS = 4;
 const RED_SHIFT = 16;
 const GREEN_SHIFT = 8;
@@ -78,7 +69,7 @@ export const readAnimationPixels = (animation: Animations, frame: string): Pixel
     )
   );
 
-export const placeDotPixels = (pixels: Pixel[][], canvas: Canvas = SPRITE_CANVAS): Pixel[][] => {
+export const placeDotPixels = (pixels: Pixel[][], canvas: Canvas = IMAGE_CANVAS): Pixel[][] => {
   const scale = Math.floor(Math.min(canvas.columns, canvas.height) / FRAME_SIZE);
   const left = Math.floor((canvas.columns - FRAME_SIZE * scale) / CENTERING_DIVISOR);
   const top = canvas.height - FRAME_SIZE * scale;
@@ -115,31 +106,6 @@ export const readPixels = (sheet: Sheet, frame: number, isMirrored: boolean): Pi
     });
     return isMirrored ? line.toReversed() : line;
   });
-};
-
-const packCell = (top: Pixel, bottom: Pixel): [number, number, number] => {
-  if (top === null && bottom === null) return [SPACE, DEFAULT_COLOR, DEFAULT_COLOR];
-  if (top === null) return [LOWER_HALF_BLOCK, bottom ?? DEFAULT_COLOR, DEFAULT_COLOR];
-  return [UPPER_HALF_BLOCK, top, bottom ?? DEFAULT_COLOR];
-};
-
-export const packHalfBlocks = (pixels: Pixel[][]): Uint32Array => {
-  const columns = pixels[0]?.length ?? 0;
-  const rows = Math.ceil(pixels.length / PIXEL_ROWS_PER_CELL);
-  const cells = new Uint32Array(columns * rows * CELL_FIELDS);
-  for (let row = 0; row < rows; row++) {
-    for (let column = 0; column < columns; column++) {
-      const top = pixels[row * PIXEL_ROWS_PER_CELL]?.[column] ?? null;
-      const bottom = pixels[row * PIXEL_ROWS_PER_CELL + 1]?.[column] ?? null;
-      cells.set(packCell(top, bottom), (row * columns + column) * CELL_FIELDS);
-    }
-  }
-  return cells;
-};
-
-export const encodePixels = (pixels: Pixel[][]): string => {
-  const bytes = new Uint8Array(packHalfBlocks(pixels).buffer);
-  return btoa(String.fromCodePoint(...bytes));
 };
 
 const formatHexColor = (pixel: number): string => `#${pixel.toString(HEX_RADIX).padStart(HEX_DIGITS, '0')}`;

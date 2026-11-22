@@ -2,8 +2,6 @@ import type { Partner, Reaction } from './partner.ts';
 import {
   FRAME_SIZE,
   FRAMES,
-  IMAGE_CANVAS,
-  SPRITE_CANVAS,
   placeDotPixels,
   readAnimationPixels,
   readPixels,
@@ -11,7 +9,6 @@ import {
 } from './sprite.ts';
 import { SHEETS } from './sprites.generated.ts';
 import { UP_IMAGES } from './up-images.generated.ts';
-import { UP_SPRITES } from './up-sprites.generated.ts';
 
 export const MS_PER_SECOND = 1000;
 export const TICKS_PER_SECOND = 10;
@@ -30,11 +27,11 @@ const readDotPixels = (form: string, frame: number, isMirrored: boolean): Pixel[
   return readPixels(sheet, frame, isMirrored);
 };
 
-export const readStillPixels = (form: string, isImage = false): Pixel[][] => {
-  const animation = (isImage ? UP_IMAGES : UP_SPRITES)[form];
+export const readStillPixels = (form: string): Pixel[][] => {
+  const animation = UP_IMAGES[form];
   const frame = animation?.walking[0];
   if (animation !== undefined && frame !== undefined) return readAnimationPixels(animation, frame);
-  return placeDotPixels(readDotPixels(form, 0, false), isImage ? IMAGE_CANVAS : SPRITE_CANVAS);
+  return placeDotPixels(readDotPixels(form, 0, false));
 };
 
 const paintReaction = (pixels: Pixel[][], reaction: Reaction | null, beat: number): Pixel[][] => {
@@ -51,15 +48,14 @@ const paintReaction = (pixels: Pixel[][], reaction: Reaction | null, beat: numbe
 const readActiveReaction = (partner: Partner, beat: number): Reaction | null =>
   beat < partner.reactionUntilTick ? partner.reaction : null;
 
-export const readPartnerPixels = (partner: Partner, tick: number, isImage = false): Pixel[][] => {
+export const readPartnerPixels = (partner: Partner, tick: number): Pixel[][] => {
   const form = partner.line.forms[partner.stage];
-  const animation = (isImage ? UP_IMAGES : UP_SPRITES)[form];
+  const animation = UP_IMAGES[form];
   const beat = Math.floor(tick / BEAT_TICKS);
   const isMirrored = Math.floor(tick / TURN_TICKS) % FACINGS === 1;
   if (animation === undefined) {
     return placeDotPixels(
-      readDotPixels(form, FRAMES.egg[beat % FRAMES.egg.length] ?? 0, isMirrored),
-      isImage ? IMAGE_CANVAS : SPRITE_CANVAS
+      readDotPixels(form, FRAMES.egg[beat % FRAMES.egg.length] ?? 0, isMirrored)
     );
   }
   const reaction = partner.isCalling ? 'angry' : readActiveReaction(partner, beat);

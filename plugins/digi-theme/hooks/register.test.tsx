@@ -9,7 +9,7 @@ import {
   encodeUpFrame,
   encodeEgg,
   hatchAgumon,
-  readBandCells
+  readBandImage
 } from './fixtures.tsx';
 import { LINES } from '../src/roster.ts';
 
@@ -45,7 +45,7 @@ test('band_SavedRandom_ShowsSomeDigitama', async (engine, hook) => {
   await startSession(engine);
 
   const eggs = LINES.map((line) => encodeEgg(line.forms.Digitama, 0));
-  expect(eggs).toContain(await readBandCells(engine));
+  expect(eggs).toContainEqual(await readBandImage(engine));
 });
 
 test('agent-digitama_UnknownPartner_KeepsSavedPartner', async (engine, hook) => {
@@ -72,7 +72,7 @@ test('band_CorruptSavedPartner_HatchesAgumon', async (engine, hook) => {
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   await clock.advance(AFTER_SCENES_MS);
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60));
 });
 
 test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
@@ -80,7 +80,7 @@ test('band_BeforeFirstPrompt_ShowsDigitama', async (engine, hook) => {
   mock.store(hook, { partner: 'Veemon' });
   await startSession(engine);
 
-  expect(await readBandCells(engine)).toBe(encodeEgg('V_Digitama', 0));
+  expect(await readBandImage(engine)).toEqual(encodeEgg('V_Digitama', 0));
 });
 
 test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
@@ -90,7 +90,7 @@ test('band_SavedVeemon_HatchesChicomon', async (engine, hook) => {
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   await clock.advance(AFTER_SCENES_MS);
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Chicomon', 60));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Chicomon', 60));
 });
 
 test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
@@ -100,7 +100,7 @@ test('band_UnreadableStore_HatchesAgumon', async (engine, hook) => {
   });
   await hatchAgumon(engine, clock);
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60));
 });
 
 test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
@@ -114,7 +114,7 @@ test('band_ClearAfterHatching_ShowsDigitamaAgain', async (engine, hook) => {
     resume: { id: 'session-1' }
   });
 
-  expect(await readBandCells(engine)).toBe(encodeEgg('Agu_Digitama', 0));
+  expect(await readBandImage(engine)).toEqual(encodeEgg('Agu_Digitama', 0));
 });
 
 test('band_FailedToolCall_FlashesRed', async (engine, hook) => {
@@ -124,7 +124,7 @@ test('band_FailedToolCall_FlashesRed', async (engine, hook) => {
   await hatchAgumon(engine, clock);
   await engine.tool.call({ tool: 'Bash', command: 'exit 3' });
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'hurt'));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60, 'hurt'));
 });
 
 test('band_TurnComplete_Hops', async (engine, hook) => {
@@ -140,7 +140,7 @@ test('band_TurnComplete_Hops', async (engine, hook) => {
     reason: 'answer'
   });
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'happy'));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60, 'happy'));
 });
 
 test('band_PermissionPrompt_PulsesAmber', async (engine, hook) => {
@@ -150,7 +150,7 @@ test('band_PermissionPrompt_PulsesAmber', async (engine, hook) => {
   await hatchAgumon(engine, clock);
   await engine.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'ls' } });
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60, 'angry'));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60, 'angry'));
 });
 
 test('band_Hatching_ShowsCrackedEgg', async (engine, hook) => {
@@ -160,7 +160,7 @@ test('band_Hatching_ShowsCrackedEgg', async (engine, hook) => {
   await engine.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } });
   await clock.advance(1100);
 
-  expect(await readBandCells(engine)).toBe(encodeEgg('Agu_Digitama', 2));
+  expect(await readBandImage(engine)).toEqual(encodeEgg('Agu_Digitama', 2));
 });
 
 test('band_SavedGabumon_EvolvesIntoUpGarurumon', async (engine, hook) => {
@@ -168,16 +168,16 @@ test('band_SavedGabumon_EvolvesIntoUpGarurumon', async (engine, hook) => {
   mock.store(hook, { partner: 'Gabumon' });
   await hatchAgumon(engine, clock);
 
-  expect(await readBandCells(engine)).toBe(encodeUpFrame('Garurumon', 6));
+  expect(await readBandImage(engine)).toEqual(encodeUpFrame('Garurumon', 6));
 });
 
 test('band_NarrowTerminal_HidesPartner', async (engine, hook) => {
   stubEngine(hook, () => 0);
   mock.store(hook);
   await startSession(engine);
-  const band = await engine.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: 23 } });
+  const band = await engine.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: 7 } });
 
-  expect(await band.find({ type: 'Raster', key: 'partner' })).toBeUndefined();
+  expect(await band.find({ type: 'Image', key: 'partner' })).toBeUndefined();
 });
 
 test('band_CompactionFromChampion_SettlesOnAgumon', async (engine, hook) => {
@@ -188,7 +188,7 @@ test('band_CompactionFromChampion_SettlesOnAgumon', async (engine, hook) => {
   contextPercent = 12;
   await clock.advance(AFTER_SCENES_MS);
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 120));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 120));
 });
 
 test('band_ChampionSetTo50_StaysAgumonAt40', { options: { champion_percent: 50, ultimate_percent: 60, mega_percent: 80 } }, async (engine, hook) => {
@@ -196,7 +196,7 @@ test('band_ChampionSetTo50_StaysAgumonAt40', { options: { champion_percent: 50, 
   mock.store(hook);
   await hatchAgumon(engine, clock);
 
-  expect(await readBandCells(engine)).toBe(encodePartner('Agumon', 60));
+  expect(await readBandImage(engine)).toEqual(encodePartner('Agumon', 60));
 });
 
 test('band_MegaBelowUltimate_UsesDefaultStages', { options: { champion_percent: 45, ultimate_percent: 60, mega_percent: 20 } }, async (engine, hook) => {
@@ -204,5 +204,5 @@ test('band_MegaBelowUltimate_UsesDefaultStages', { options: { champion_percent: 
   mock.store(hook);
   await hatchAgumon(engine, clock);
 
-  expect(await readBandCells(engine)).toBe(encodeUpFrame('Greymon', 6));
+  expect(await readBandImage(engine)).toEqual(encodeUpFrame('Greymon', 6));
 });

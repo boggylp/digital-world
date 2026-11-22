@@ -14,16 +14,11 @@ Answer `y` to add the marketplace, then pick a scope. The partner appears in the
 
 ## The partner above the prompt
 
-Requirements: Claude Code with mods (tested on 2.1.326), in a truecolor terminal or the desktop app. The desktop app draws the partner as vector pixel art.
+Requirements: Claude Code with mods (tested on 2.1.326), in a terminal that draws images or the desktop app. The desktop app draws the partner as vector pixel art.
 
-The desktop app always uses the detailed sprites, 64 pixels tall. In the terminal, Ghostty, kitty and compatible iTerm2 sessions use image rendering, and other terminals use text cells. If Claude refuses the first image, the partner falls back to text cells for that session.
+The desktop app draws the sprites 64 pixels tall. In the terminal, the partner is an image, drawn in Ghostty, kitty and compatible iTerm2 sessions. Other terminals show no partner. A session whose first image Claude refuses shows none either.
 
-| Renderer | Minimum band width | Minimum band height |
-| --- | --- | --- |
-| Image | 8 columns | 4 rows |
-| Text cells | 24 columns | 8 rows |
-
-In the terminal, the partner hides when the band cannot fit its renderer. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
+In the terminal, the partner takes 8 columns and 4 rows, and hides when the band is smaller. Inside multiplexers, image rendering follows Claude's documented [`CLAUDE_CODE_FORCE_TERMINAL_IMAGES`](https://code.claude.com/docs/en/plugins/mods/gallery.md) setting. Enable it only when the complete terminal path supports images.
 
 ### How the partner grows
 
@@ -61,12 +56,7 @@ New sessions hatch the saved partner's egg. The current session keeps its partne
 
 ### Sprites
 
-[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for every form after the egg. Every form draws at the same height. The image renderer and the desktop app preserve the artwork on a compact canvas. The text fallback uses half-block characters. Each form keeps one scale across its animation frames.
-
-| Renderer | Pixel canvas |
-| --- | --- |
-| Image and desktop | 80×80 |
-| Text cells | 24×16 |
+[Digimon UP](https://github.com/dannyphang/digimon-up-sprites) supplies the walking and idle animations for every form after the egg. Every form draws at the same height on an 80×80 pixel canvas. Each form keeps one scale across its animation frames.
 
 Eggs use Tortoiseshel's [Full Color Digimon Dot Sprites](https://withthewill.net/threads/full-color-digimon-dot-sprites.25843/) with their original artwork, scaled evenly for image rendering. Both sets are bundled for offline use. See [CREDITS.md](CREDITS.md).
 

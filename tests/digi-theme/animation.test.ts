@@ -5,7 +5,7 @@ import { callPartner, createPartner, reactPartner, type Reaction } from '../../p
 import { findLine } from '../../plugins/digi-theme/src/roster.ts';
 import { placeDotPixels, readAnimationPixels, readPixels } from '../../plugins/digi-theme/src/sprite.ts';
 import { SHEETS } from '../../plugins/digi-theme/src/sprites.generated.ts';
-import { UP_SPRITES } from '../../plugins/digi-theme/src/up-sprites.generated.ts';
+import { UP_IMAGES } from '../../plugins/digi-theme/src/up-images.generated.ts';
 
 const createGabumon = () => {
   const line = findLine('Gabumon');
@@ -14,7 +14,7 @@ const createGabumon = () => {
 };
 
 const readGabumonFrame = (kind: 'walking' | 'idle', index: number) => {
-  const animation = UP_SPRITES.Gabumon;
+  const animation = UP_IMAGES.Gabumon;
   assert.isDefined(animation);
   const frame = animation[kind][index];
   assert.isDefined(frame);
@@ -47,7 +47,7 @@ describe('readPartnerPixels', () => {
 
   it('readPartnerPixels_CompletedTurn_HopsUp', () => {
     const pixels = readPartnerPixels(createReactingGabumon('happy'), 0);
-    expect(pixels.slice(0, -1)).toStrictEqual(readGabumonFrame('idle', 0).slice(1));
+    expect(pixels.slice(0, -5)).toStrictEqual(readGabumonFrame('idle', 0).slice(5));
   });
 
   it('readPartnerPixels_HoppingPartner_KeepsEveryOpaquePixel', () => {
@@ -74,7 +74,7 @@ describe('readPartnerPixels', () => {
   });
 });
 
-const countWalkingFrames = (form: string, isImage: boolean): number => {
+const countWalkingFrames = (form: string): number => {
   const partner = createGabumon();
   const selected = {
     ...partner,
@@ -82,12 +82,12 @@ const countWalkingFrames = (form: string, isImage: boolean): number => {
   };
   return new Set(
     Array.from({ length: 14 }, (_value, tick) =>
-      JSON.stringify(readPartnerPixels(selected, tick, isImage))
+      JSON.stringify(readPartnerPixels(selected, tick))
     )
   ).size;
 };
 
-describe.each([false, true])('readPartnerPixels (image=%s)', (isImage) => {
+describe('readPartnerPixels walking', () => {
   it.each([
     'Botamon',
     'Koromon',
@@ -112,7 +112,7 @@ describe.each([false, true])('readPartnerPixels (image=%s)', (isImage) => {
     'Lilimon',
     'Rosemon'
   ])('readPartnerPixels_%s_RetainsDetailedWalkingSequence', (form) => {
-    expect(countWalkingFrames(form, isImage)).toBeGreaterThan(2);
+    expect(countWalkingFrames(form)).toBeGreaterThan(2);
   });
 });
 
@@ -130,13 +130,13 @@ describe('readPartnerPixels egg', () => {
 });
 
 describe('readStillPixels', () => {
-  it('readStillPixels_ImageRenderer_RetainsMoreThanTextCellDetail', () => {
-    const pixels = readStillPixels('Gabumon', true);
+  it('readStillPixels_Gabumon_RetainsDetailedArtwork', () => {
+    const pixels = readStillPixels('Gabumon');
     expect(pixels.flat().filter((pixel) => pixel !== null).length).toBeGreaterThan(384);
   });
 
-  it('readStillPixels_ImageRenderer_CentersLegacySpritesOnImageCanvas', () => {
-    expect(readStillPixels('V-mon', true)).toHaveLength(80);
+  it('readStillPixels_Veemon_FillsImageCanvasHeight', () => {
+    expect(readStillPixels('V-mon')).toHaveLength(80);
   });
 
   it('readStillPixels_Egg_PreservesOriginalDotPixels', () => {
