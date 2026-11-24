@@ -7,7 +7,8 @@
     "oxc",
     "node",
     "promise",
-    "vitest"
+    "vitest",
+    "import"
   ],
   "categories": {
     "correctness": "error",
@@ -107,7 +108,23 @@
     "vitest/prefer-called-times": "off",
     "vitest/require-top-level-describe": "off",
     "unicorn/number-literal-case": "off",
-    "unicorn/prefer-structured-clone": "off"
+    "unicorn/prefer-structured-clone": "off",
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "import/no-nodejs-modules": "off",
+    "import/consistent-type-specifier-style": "off",
+    "import/no-namespace": "off",
+    "import/max-dependencies": [
+      "error",
+      {
+        "max": 15,
+        "ignoreTypeImports": true
+      }
+    ],
+    "import/no-cycle": "error",
+    "typescript/no-import-type-side-effects": "error"
   },
   "overrides": [
     {
