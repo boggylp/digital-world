@@ -128,7 +128,8 @@
       "error",
       "always",
       {
-        "ignorePackages": true
+        "ignorePackages": true,
+        "checkTypeImports": true
       }
     ],
     "import/no-unassigned-import": "error",
