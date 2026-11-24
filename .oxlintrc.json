@@ -124,6 +124,13 @@
     ],
     "import/no-cycle": "error",
     "import/no-default-export": "error",
+    "import/extensions": [
+      "error",
+      "always",
+      {
+        "ignorePackages": true
+      }
+    ],
     "typescript/no-import-type-side-effects": "error"
   },
   "overrides": [
