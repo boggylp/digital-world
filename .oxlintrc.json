@@ -123,9 +123,21 @@
       }
     ],
     "import/no-cycle": "error",
+    "import/no-default-export": "error",
     "typescript/no-import-type-side-effects": "error"
   },
   "overrides": [
+    {
+      "files": [
+        "**/*.config.ts",
+        "**/*.config.mts",
+        "**/*.config.js",
+        "**/*.config.mjs"
+      ],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    },
     {
       "files": [
         "**/tests/**",
