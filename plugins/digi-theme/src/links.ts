@@ -10,7 +10,7 @@ export const createFileHref = (path: string, home: string): string => {
 };
 
 const linkifyPlain = (text: string, home: string): string =>
-  text.replace(PATH, (match, path: string) => {
+  text.replaceAll(PATH, (match, path: string) => {
     const isHomePath = path.startsWith('~');
     if (isHomePath && !home) return match;
     return `[${match}](${createFileHref(path, home)})`;
