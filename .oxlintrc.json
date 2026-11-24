@@ -131,6 +131,7 @@
         "ignorePackages": true
       }
     ],
+    "import/no-unassigned-import": "error",
     "typescript/no-import-type-side-effects": "error"
   },
   "overrides": [
